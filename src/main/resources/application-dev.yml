@@ -1,0 +1,17 @@
+# ===============================================
+# =         DEVELOPMENT ENVIRONMENT           =
+# ===============================================
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/tmta?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
+    username: root
+    password: password # 로컬 개발용 비밀번호
+  jpa:
+    database: mysql
+    hibernate:
+      ddl-auto: update # 개발 환경에서는 update 또는 create를 사용하여 스키마 자동 변경
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true # SQL 로그를 예쁘게 포맷팅
