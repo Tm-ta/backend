@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <!-- 로그 파일이 저장될 경로 -->
+    <property name="LOGS_PATH" value="./logs"/>
+
+    <!-- 로그 출력 패턴 정의 -->
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- 1. 콘솔(Console) Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 2. 파일(File) Appender with Rolling Policy -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOGS_PATH}/logback.log</file> <!-- 기본 로그 파일명 -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <!-- 날짜별, 사이즈별 롤링 -->
+            <fileNamePattern>${LOGS_PATH}/logback-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize> <!-- 파일 최대 사이즈 -->
+            <maxHistory>30</maxHistory> <!-- 30일간 보관 -->
+            <totalSizeCap>1GB</totalSizeCap> <!-- 전체 로그 파일의 최대 용량 -->
+        </rollingPolicy>
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 'dev' 프로필 활성 시 설정 -->
+    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        <!-- TMTA 프로젝트의 로그는 DEBUG 레벨까지 출력 -->
+        <logger name="com.example.tmta" level="DEBUG" additivity="false">
+            <appender-ref ref="CONSOLE"/>
+        </logger>
+    </springProfile>
+
+    <!-- 'prod' 프로필 활성 시 설정 -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="FILE"/>
+        </root>
+        <logger name="com.example.tmta" level="INFO" additivity="false">
+             <appender-ref ref="FILE"/>
+        </logger>
+    </springProfile>
+
+</configuration>
