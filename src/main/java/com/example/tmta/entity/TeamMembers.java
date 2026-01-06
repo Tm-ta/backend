@@ -1,23 +1,26 @@
 package com.example.tmta.entity;
 
-import com.example.tmta.entity.type.TeamRole;
 import com.example.tmta.entity.type.InviteState;
+import com.example.tmta.entity.type.TeamRole;
 import jakarta.persistence.*;
+import lombok.Getter;
 
-import static jakarta.persistence.EnumType.*;
-import static jakarta.persistence.GenerationType.*;
+import java.util.UUID;
+
+import static jakarta.persistence.EnumType.STRING;
 
 @Entity
+@Getter
 public class TeamMembers extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "group_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "team_id")
     private Team team;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id")
     private Member member;
 

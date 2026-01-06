@@ -6,15 +6,15 @@ import lombok.Getter;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
-import static jakarta.persistence.EnumType.*;
-import static jakarta.persistence.GenerationType.*;
+import static jakarta.persistence.EnumType.STRING;
 
 @Entity
 @Getter
 public class Member extends BaseEntity{
     @Id
-    @GeneratedValue(strategy = IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String name;
     private String nickName;
@@ -24,8 +24,10 @@ public class Member extends BaseEntity{
     private boolean pushAlarmAgree;
     @Enumerated(value = STRING)
     private MemberRole role;
-    @OneToMany(mappedBy = "member")
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<TeamMembers> teamMembersList = new ArrayList<>();
-    @OneToMany(mappedBy = "member")
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AvailableTime> availableTimeList = new ArrayList<>();
+    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Vote> voteList = new ArrayList<>();
 }

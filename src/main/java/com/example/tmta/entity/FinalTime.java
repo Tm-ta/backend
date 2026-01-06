@@ -5,20 +5,19 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-
-import static jakarta.persistence.GenerationType.*;
+import java.util.UUID;
 
 @Entity
 @Getter
-public class FinalTime {
+public class FinalTime extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
 
-    private Long id;
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;

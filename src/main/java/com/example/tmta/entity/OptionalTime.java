@@ -5,22 +5,25 @@ import lombok.Getter;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
-
-import static jakarta.persistence.GenerationType.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Entity
 @Getter
-public class OptionalTime {
+public class OptionalTime extends BaseEntity {
     @Id
-    @GeneratedValue(strategy = IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;
+
+    @OneToMany(mappedBy = "optionalTime", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Vote> voteList = new ArrayList<>();
 
     private LocalDate date;
     private LocalTime startTime;
     private LocalTime endTime;
-    private Integer voteCount;
 }
