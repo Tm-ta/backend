@@ -52,6 +52,5 @@ public class Team extends BaseEntity{
 
     public void addTeamMember(TeamMembers teamMembers) {
         teamMembersList.add(teamMembers);
-        teamMembers.setTeam(this);
     }
 }

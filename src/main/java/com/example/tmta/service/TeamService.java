@@ -6,6 +6,7 @@ import com.example.tmta.entity.Member;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import com.example.tmta.entity.type.InviteState;
+import com.example.tmta.entity.type.MemberRole;
 import com.example.tmta.entity.type.TeamRole;
 import com.example.tmta.repository.MemberRepository;
 import com.example.tmta.repository.TeamMembersRepository;
@@ -35,8 +36,8 @@ public class TeamService {
         TeamMembers teamMembers = TeamMembers.builder()
                 .team(team)
                 .member(member)
-                .inviteState(InviteState.ACCEPTED)
-                .teamRole(TeamRole.LEADER)
+                .inviteState(InviteState.ACCEPT)
+                .teamRole(TeamRole.ADMIN)
                 .build();
         teamMembersRepository.save(teamMembers);
 
@@ -54,7 +55,7 @@ public class TeamService {
                 .authProvider("test")
                 .providerId("test")
                 .pushAlarmAgree(true)
-                .role(com.example.tmta.entity.type.MemberRole.USER)
+                .role(MemberRole.GENERAL)
                 .build();
         return memberRepository.save(member);
     }
@@ -86,7 +87,7 @@ public class TeamService {
                 .team(team)
                 .member(member)
                 .inviteState(com.example.tmta.entity.type.InviteState.PENDING)
-                .teamRole(com.example.tmta.entity.type.TeamRole.MEMBER)
+                .teamRole(TeamRole.GENERAL)
                 .build();
         teamMembersRepository.save(teamMembers);
         return teamMembers.getId();
@@ -104,7 +105,7 @@ public class TeamService {
         TeamMembers leaderTeamMembers = teamMembersRepository.findByTeamAndMember(team, leader)
                 .orElseThrow(() -> new IllegalArgumentException("Leader is not in the team"));
 
-        if (leaderTeamMembers.getTeamRole() != com.example.tmta.entity.type.TeamRole.LEADER) {
+        if (leaderTeamMembers.getTeamRole() != TeamRole.ADMIN) {
             throw new IllegalArgumentException("Only the leader can kick members");
         }
 
@@ -126,15 +127,15 @@ public class TeamService {
         TeamMembers currentLeaderTeamMembers = teamMembersRepository.findByTeamAndMember(team, currentLeader)
                 .orElseThrow(() -> new IllegalArgumentException("Leader is not in the team"));
 
-        if (currentLeaderTeamMembers.getTeamRole() != com.example.tmta.entity.type.TeamRole.LEADER) {
+        if (currentLeaderTeamMembers.getTeamRole() != TeamRole.ADMIN) {
             throw new IllegalArgumentException("Only the leader can delegate the role");
         }
 
         TeamMembers newLeaderTeamMembers = teamMembersRepository.findByTeamAndMember(team, newLeader)
                 .orElseThrow(() -> new IllegalArgumentException("New leader is not in the team"));
 
-        currentLeaderTeamMembers.setTeamRole(com.example.tmta.entity.type.TeamRole.MEMBER);
-        newLeaderTeamMembers.setTeamRole(com.example.tmta.entity.type.TeamRole.LEADER);
+        currentLeaderTeamMembers.updateTeamRole(TeamRole.GENERAL);
+        newLeaderTeamMembers.updateTeamRole(TeamRole.ADMIN);
     }
 
     @Transactional
@@ -147,7 +148,7 @@ public class TeamService {
         TeamMembers teamMembers = teamMembersRepository.findByTeamAndMember(team, member)
                 .orElseThrow(() -> new IllegalArgumentException("Member is not in the team"));
 
-        if (teamMembers.getTeamRole() == com.example.tmta.entity.type.TeamRole.LEADER) {
+        if (teamMembers.getTeamRole() == TeamRole.ADMIN) {
             java.util.List<TeamMembers> teamMembersList = teamMembersRepository.findAllByTeam(team);
             if (teamMembersList.size() > 1) {
                 throw new IllegalStateException("Leader cannot exit the team if there are other members");

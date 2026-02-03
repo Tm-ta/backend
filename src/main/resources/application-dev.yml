@@ -6,7 +6,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/tmta?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
     username: root
-    password: password # 로컬 개발용 비밀번호
+    password: rladbqls1208 # 로컬 개발용 비밀번호
   jpa:
     database: mysql
     hibernate:

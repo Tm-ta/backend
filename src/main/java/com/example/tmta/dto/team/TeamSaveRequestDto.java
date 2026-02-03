@@ -14,8 +14,8 @@ public class TeamSaveRequestDto {
     public Team toEntity() {
         return Team.builder()
                 .name(teamName)
-                .namePolicy(useRealName ? NamePolicy.USE_REAL_NAME : NamePolicy.USE_NICKNAME)
-                .postPermission(onlyLeaderCanPost ? PostPermission.LEADER_ONLY : PostPermission.MEMBER_ALL)
+                .namePolicy(useRealName ? NamePolicy.USE_REALNAME : NamePolicy.USE_NICKNAME)
+                .postPermission(onlyLeaderCanPost ? PostPermission.LEADER_ONLY : PostPermission.ALL_MEMBERS)
                 .build();
     }
 }

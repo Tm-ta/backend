@@ -23,7 +23,6 @@ public class TeamMembers extends BaseEntity {
     @JoinColumn(name = "member_id")
     private Member member;
 
-    @Setter
     @Enumerated(value = STRING)
     private InviteState inviteState;
 
@@ -39,7 +38,7 @@ public class TeamMembers extends BaseEntity {
         this.teamRole = teamRole;
     }
 
-    public void setTeam(Team team) {
-        this.team = team;
+    public void updateTeamRole(TeamRole teamRole) {
+        this.teamRole = teamRole;
     }
 }
