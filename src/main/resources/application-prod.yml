@@ -15,6 +15,7 @@ spring:
     hibernate:
       # 운영 환경에서는 스키마 자동 생성을 사용하지 않고, 엔티티와 테이블이 일치하는지만 검증합니다. (validate)
       # none: 아무것도 하지 않음. 가장 안전한 옵션.
-      ddl-auto: validate
+      # update: 변경된 스키마를 적용. 초기 실행 시 테이블 생성을 위해 사용.
+      ddl-auto: update
     # 성능을 위해 운영 환경에서는 SQL 로그를 출력하지 않습니다.
     show-sql: false
