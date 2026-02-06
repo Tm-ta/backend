@@ -10,9 +10,6 @@
 # Gradle
 .gradle
 build/
-gradle/
-gradlew
-gradlew.bat
 
 # Docker
 Dockerfile
