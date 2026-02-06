@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea
+*.iml
+
+# Gradle
+.gradle
+build/
+gradle/
+gradlew
+gradlew.bat
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Log files
+*.log
