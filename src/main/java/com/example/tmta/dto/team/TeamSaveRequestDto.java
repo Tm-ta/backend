@@ -3,13 +3,26 @@ package com.example.tmta.dto.team;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.type.NamePolicy;
 import com.example.tmta.entity.type.PostPermission;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
+@NoArgsConstructor
+@Schema(description = "팀 생성 요청 DTO")
 public class TeamSaveRequestDto {
+    @Schema(description = "팀 이름", example = "팀 프로젝트")
     private String teamName;
+    @Schema(description = "실명 사용 여부", example = "true")
     private Boolean useRealName;
+    @Schema(description = "리더만 포스트 작성 가능 여부", example = "false")
     private Boolean onlyLeaderCanPost;
+
+    public TeamSaveRequestDto(String teamName, Boolean useRealName, Boolean onlyLeaderCanPost) {
+        this.teamName = teamName;
+        this.useRealName = useRealName;
+        this.onlyLeaderCanPost = onlyLeaderCanPost;
+    }
 
     public Team toEntity() {
         return Team.builder()
