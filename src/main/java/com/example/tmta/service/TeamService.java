@@ -160,31 +160,35 @@ public class TeamService {
 
     @Transactional
     public TeamSaveResponseDto createTeam(TeamSaveRequestDto requestDto) {
-        // TODO : Get Member From Security Context Holder
-        // Member member = Member.builder()
-        //         .email("test@test.com")
-        //         .name("test")
-        //         .nickName("test")
-        //         .role(MemberRole.GENERAL)
-        //         .build();
-        // memberRepository.save(member);
+        Member member = memberRepository.findByEmail("test@test.com").orElse(
+                Member.builder()
+                        .email("test@test.com")
+                        .name("test")
+                        .nickName("test")
+                        .role(MemberRole.GENERAL)
+                        .build()
+        );
+        memberRepository.save(member);
 
         Team team = requestDto.toEntity();
         teamRepository.save(team);
 
-        // TeamMembers teamMembers = TeamMembers.builder()
-        //         .team(team)
-        //         .member(member)
-        //         .inviteState(InviteState.ACCEPT)
-        //         .teamRole(TeamRole.ADMIN)
-        //         .build();
-        // teamMembersRepository.save(teamMembers);
+        TeamMembers teamMembers = TeamMembers.builder()
+                .team(team)
+                .member(member)
+                .inviteState(InviteState.ACCEPT)
+                .teamRole(TeamRole.ADMIN)
+                .build();
+        teamMembersRepository.save(teamMembers);
 
-        // team.addTeamMember(teamMembers);
+        team.addTeamMember(teamMembers);
         return new TeamSaveResponseDto(team);
     }
 
     public void createTestMember() {
+        if (memberRepository.findByEmail("test@test.com").isPresent()) {
+            return;
+        }
         Member member = Member.builder()
                 .email("test@test.com")
                 .name("test")
