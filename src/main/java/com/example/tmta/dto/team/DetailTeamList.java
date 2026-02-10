@@ -51,8 +51,13 @@ public class DetailTeamList {
 
         public AppointmentDetail(Appointment appointment) {
             this.appointmentId = appointment.getId();
-            this.startDate = appointment.getAppointmentDateList().get(0).getDate();
-            this.endDate = appointment.getAppointmentDateList().get(appointment.getAppointmentDateList().size() - 1).getDate();
+            if (!appointment.getAppointmentDateList().isEmpty()) {
+                this.startDate = appointment.getAppointmentDateList().get(0).getDate();
+                this.endDate = appointment.getAppointmentDateList().get(appointment.getAppointmentDateList().size() - 1).getDate();
+            } else {
+                this.startDate = null;
+                this.endDate = null;
+            }
             this.memberCount = (long) appointment.getTeam().getTeamMembersList().size();
             this.state = appointment.getState();
         }

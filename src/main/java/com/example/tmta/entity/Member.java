@@ -6,6 +6,7 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor; // Added AllArgsConstructor
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,8 @@ import static jakarta.persistence.EnumType.STRING;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor // Added AllArgsConstructor
+@Builder // Moved Builder to class level
 public class Member extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,20 +32,12 @@ public class Member extends BaseEntity{
     @Enumerated(value = STRING)
     private MemberRole role;
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default // Added Builder.Default
     private List<TeamMembers> teamMembersList = new ArrayList<>();
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default // Added Builder.Default
     private List<AvailableTime> availableTimeList = new ArrayList<>();
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default // Added Builder.Default
     private List<Vote> voteList = new ArrayList<>();
-
-    @Builder
-    public Member(String name, String nickName, String email, String authProvider, String providerId, boolean pushAlarmAgree, MemberRole role) {
-        this.name = name;
-        this.nickName = nickName;
-        this.email = email;
-        this.authProvider = authProvider;
-        this.providerId = providerId;
-        this.pushAlarmAgree = pushAlarmAgree;
-        this.role = role;
-    }
 }
