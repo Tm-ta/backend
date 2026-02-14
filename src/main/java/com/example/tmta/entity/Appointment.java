@@ -12,7 +12,10 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalTime;
@@ -24,6 +27,9 @@ import static jakarta.persistence.EnumType.STRING;
 
 @Entity
 @Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class Appointment extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,12 +40,14 @@ public class Appointment extends BaseEntity{
     private Team team;
 
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<AppointmentDate> appointmentDateList = new ArrayList<>();
 
     @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     private FinalTime finalTime;
 
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<OptionalTime> optionalTimeList = new ArrayList<>();
 
     @OneToOne(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)

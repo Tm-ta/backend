@@ -3,14 +3,13 @@ package com.example.tmta.entity;
 import com.example.tmta.entity.type.InviteState;
 import com.example.tmta.entity.type.TeamRole;
 import jakarta.persistence.*;
-import lombok.Getter;
-
-import java.util.UUID;
+import lombok.*;
 
 import static jakarta.persistence.EnumType.STRING;
 
 @Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TeamMembers extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,6 +27,18 @@ public class TeamMembers extends BaseEntity {
     private InviteState inviteState;
 
     @Enumerated(value = STRING)
+    @Column(nullable = false)
     private TeamRole teamRole;
 
+    @Builder
+    public TeamMembers(Team team, Member member, InviteState inviteState, TeamRole teamRole) {
+        this.team = team;
+        this.member = member;
+        this.inviteState = inviteState;
+        this.teamRole = teamRole;
+    }
+
+    public void updateTeamRole(TeamRole teamRole) {
+        this.teamRole = teamRole;
+    }
 }

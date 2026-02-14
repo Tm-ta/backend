@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: tmta-app
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      # IMPORTANT: Ensure these credentials match the ones for the 'db' service below.
+      - DB_URL=jdbc:mysql://db:3306/tmta?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
+      - DB_USERNAME=user
+      - DB_PASSWORD=password # Replace with a strong password in production
+    networks:
+      - tmta-network
+
+  db:
+    image: mysql:8.0
+    container_name: tmta-db
+    ports:
+      - "3306:3306"
+    environment:
+      # IMPORTANT: Change these default credentials for production use.
+      - MYSQL_ROOT_PASSWORD=rootpassword # Replace with a strong password
+      - MYSQL_DATABASE=tmta
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=password # Replace with a strong password
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tmta-network
+
+networks:
+  tmta-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
