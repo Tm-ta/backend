@@ -60,9 +60,21 @@ public class TeamController {
             @ApiResponse(responseCode = "404", description = "사용자 또는 팀을 찾을 수 없습니다.")
     })
     @PostMapping("/{teamId}")
-    public ResponseEntity<?> joinTeam(@Parameter(description = "팀 ID") @PathVariable java.util.UUID teamId, @RequestBody RequestJoinDto request){
-        teamService.joinTeam(teamId, request);
+    public ResponseEntity<?> joinTeam(@Parameter(description = "팀 ID") @PathVariable java.util.UUID teamId){
+        teamService.joinTeam(teamId);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Operation(summary = "팀 프로필 설정/수정", description = "팀에서 사용할 닉네임/프로필 이미지를 설정하거나 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "팀 프로필 설정/수정 성공"),
+            @ApiResponse(responseCode = "404", description = "사용자 또는 팀을 찾을 수 없습니다.")
+    })
+    @PatchMapping("/{teamId}/me/profile")
+    public ResponseEntity<?> setupTeamProfile(@Parameter(description = "팀 ID") @PathVariable java.util.UUID teamId,
+                                              @Valid @RequestBody TeamProfileSetupRequestDto request){
+        teamService.setupMyTeamProfile(teamId, request);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Operation(summary = "팀 탈퇴", description = "사용자가 특정 팀에서 탈퇴합니다.")
@@ -101,12 +113,4 @@ public class TeamController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    @Operation(summary = "테스트 멤버 생성", description = "테스트용 멤버를 생성합니다.")
-    @PostMapping("/test-member")
-    public ResponseEntity<?> createTestMember() {
-        teamService.createTestMember();
-        return new ResponseEntity<>(HttpStatus.CREATED);
-    }
 }
-
-

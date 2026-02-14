@@ -5,6 +5,7 @@ import com.example.tmta.entity.Member;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import com.example.tmta.entity.type.AppointmentState;
+import com.example.tmta.entity.type.AuthProvider;
 import com.example.tmta.entity.type.InviteState;
 import com.example.tmta.entity.type.MemberRole;
 import com.example.tmta.entity.type.TeamRole;
@@ -14,21 +15,23 @@ import com.example.tmta.repository.TeamMembersRepository;
 import com.example.tmta.repository.TeamRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Component
+@Profile("dev")
 @RequiredArgsConstructor
 public class DataLoader implements CommandLineRunner {
 
     private final MemberRepository memberRepository;
     private final TeamRepository teamRepository;
     private final TeamMembersRepository teamMembersRepository;
-    private final AppointmentRepository appointmentRepository; // Inject AppointmentRepository
+    private final AppointmentRepository appointmentRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -37,8 +40,12 @@ public class DataLoader implements CommandLineRunner {
         Member testMember = memberRepository.findByEmail("test@test.com").orElseGet(() -> {
             Member member = Member.builder()
                     .email("test@test.com")
+                    .password(passwordEncoder.encode("Test1234!"))
                     .name("Test User")
                     .nickName("Tester")
+                    .profileSetupCompleted(true)
+                    .authProvider(AuthProvider.LOCAL)
+                    .emailVerified(true)
                     .role(MemberRole.GENERAL)
                     .build();
             return memberRepository.save(member);
@@ -47,8 +54,12 @@ public class DataLoader implements CommandLineRunner {
         Member member1 = memberRepository.findByEmail("member1@test.com").orElseGet(() -> {
             Member member = Member.builder()
                     .email("member1@test.com")
+                    .password(passwordEncoder.encode("Test1234!"))
                     .name("Member One")
                     .nickName("One")
+                    .profileSetupCompleted(true)
+                    .authProvider(AuthProvider.LOCAL)
+                    .emailVerified(true)
                     .role(MemberRole.GENERAL)
                     .build();
             return memberRepository.save(member);
@@ -57,8 +68,12 @@ public class DataLoader implements CommandLineRunner {
         Member member2 = memberRepository.findByEmail("member2@test.com").orElseGet(() -> {
             Member member = Member.builder()
                     .email("member2@test.com")
+                    .password(passwordEncoder.encode("Test1234!"))
                     .name("Member Two")
                     .nickName("Two")
+                    .profileSetupCompleted(true)
+                    .authProvider(AuthProvider.LOCAL)
+                    .emailVerified(true)
                     .role(MemberRole.GENERAL)
                     .build();
             return memberRepository.save(member);
@@ -78,6 +93,9 @@ public class DataLoader implements CommandLineRunner {
                     .member(testMember)
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.ADMIN)
+                    .teamNickName(testMember.getNickName())
+                    .teamProfileImage(testMember.getProfileImage())
+                    .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmAlphaAdmin);
             teamAlpha.addTeamMember(tmAlphaAdmin);
@@ -88,6 +106,9 @@ public class DataLoader implements CommandLineRunner {
                     .member(member1)
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.GENERAL)
+                    .teamNickName(member1.getNickName())
+                    .teamProfileImage(member1.getProfileImage())
+                    .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmAlphaMember1);
             teamAlpha.addTeamMember(tmAlphaMember1);
@@ -130,6 +151,9 @@ public class DataLoader implements CommandLineRunner {
                     .member(member1)
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.ADMIN)
+                    .teamNickName(member1.getNickName())
+                    .teamProfileImage(member1.getProfileImage())
+                    .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaAdmin);
             teamBeta.addTeamMember(tmBetaAdmin);
@@ -140,6 +164,9 @@ public class DataLoader implements CommandLineRunner {
                     .member(testMember)
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.GENERAL)
+                    .teamNickName(testMember.getNickName())
+                    .teamProfileImage(testMember.getProfileImage())
+                    .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaTestMember);
             teamBeta.addTeamMember(tmBetaTestMember);
@@ -150,6 +177,9 @@ public class DataLoader implements CommandLineRunner {
                     .member(member2)
                     .inviteState(InviteState.PENDING) // Pending invite
                     .teamRole(TeamRole.GENERAL)
+                    .teamNickName(member2.getNickName())
+                    .teamProfileImage(member2.getProfileImage())
+                    .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaMember2);
             teamBeta.addTeamMember(tmBetaMember2);

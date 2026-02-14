@@ -18,7 +18,7 @@ public class TeamListResponseDto {
 
     public TeamListResponseDto(List<TeamMembers> teamMembers) {
         this.teamList = teamMembers.stream()
-                .map(tm -> new TeamInfo(tm.getTeam()))
+                .map(TeamInfo::new)
                 .collect(Collectors.toList());
     }
 
@@ -35,15 +35,24 @@ public class TeamListResponseDto {
         private Long memberCount;
         @Schema(description = "팀원 프로필 이미지 목록")
         private List<String> memberProfiles;
+        @Schema(description = "팀에서 사용하는 팀원 이름 목록")
+        private List<String> memberNames;
+        @Schema(description = "내 팀 프로필 설정 완료 여부")
+        private boolean myTeamProfileSetupCompleted;
 
-        public TeamInfo(Team team) {
+        public TeamInfo(TeamMembers myTeamMembers) {
+            Team team = myTeamMembers.getTeam();
             this.groupId = team.getId();
             this.groupName = team.getName();
             this.state = team.getAppointmentList().isEmpty() ? AppointmentState.CREATING : team.getAppointmentList().get(0).getState();
             this.memberCount = (long) team.getTeamMembersList().size();
             this.memberProfiles = team.getTeamMembersList().stream()
-                    .map(tm -> tm.getMember().getNickName())
+                    .map(tm -> tm.getTeamProfileImage() != null ? tm.getTeamProfileImage() : tm.getMember().getProfileImage())
                     .collect(Collectors.toList());
+            this.memberNames = team.getTeamMembersList().stream()
+                    .map(tm -> tm.getTeamNickName() != null ? tm.getTeamNickName() : tm.getMember().getNickName())
+                    .collect(Collectors.toList());
+            this.myTeamProfileSetupCompleted = myTeamMembers.isTeamProfileSetupCompleted();
         }
     }
 }
