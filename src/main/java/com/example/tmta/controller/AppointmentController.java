@@ -1,5 +1,9 @@
 package com.example.tmta.controller;
 
+import java.util.Map;
+import java.util.UUID;
+
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,64 +24,75 @@ import com.example.tmta.dto.appointment.AppointmentTimeTableResponseDto;
 import com.example.tmta.dto.appointment.AppointmentUpdateRequestDto;
 import com.example.tmta.service.AppointmentService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springdoc.core.annotations.ParameterObject;
 import lombok.RequiredArgsConstructor;
 
+@Tag(name = "Appointment", description = "팀 약속 관련 API")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/teams/{teamId}/appointments")
 public class AppointmentController {
 private final AppointmentService appointmentService;
 
-	// 팀 일정 생성
+	@Operation(summary = "팀 약속 생성")
 	@PostMapping
-	public ResponseEntity<?> createTeamAppointment(@PathVariable Long teamId, @RequestBody AppointmentSaveRequestDto request){
-		return ResponseEntity.ok().build();
+	public ResponseEntity<Map<String, UUID>> createTeamAppointment(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @RequestBody AppointmentSaveRequestDto request){
+		UUID appointmentId = appointmentService.createTeamAppointment(teamId, request);
+		return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("appointmentId", appointmentId));
 	}
 
-	// 팀 일정 상세 조회
+	@Operation(summary = "팀 약속 상세 조회")
 	@GetMapping("/{appointmentId}")
-	public ResponseEntity<AppointmentDetailResponseDto> getTeamAppointmentDetail(@PathVariable Long teamId, @PathVariable Long appointmentId){
-		return ResponseEntity.ok().build();
+	public ResponseEntity<AppointmentDetailResponseDto> getTeamAppointmentDetail(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId){
+		return ResponseEntity.ok(appointmentService.getTeamAppointmentDetail(teamId, appointmentId));
 	}
 
-	// 시간 등록 마감 후 후보지 조회(필터링 {참여자가 있는 시간대, 참여 인원이 n명 이상인 시간대, 연속된 시간이 n시간 이상인 시간다}, 정렬{날짜 가까운 순, 참여자 많은 순, 연속된 시간이 긴 순})
+	@Operation(summary = "팀 약속 후보 시간 조회")
 	@GetMapping("/{appointmentId}/list")
-	public ResponseEntity<AppointmentListResponseDto> getTeamAppointmentCandidate(@PathVariable Long teamId, @PathVariable Long appointmentId,
-		@ModelAttribute AppointmentCandidateFilter urlRequest) {
-		return ResponseEntity.ok().build();
+	public ResponseEntity<AppointmentListResponseDto> getTeamAppointmentCandidate(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId,
+		@ParameterObject @ModelAttribute AppointmentCandidateFilter urlRequest) {
+		return ResponseEntity.ok(appointmentService.getTeamAppointmentCandidate(teamId, appointmentId, urlRequest));
 	}
 
 
+	@Operation(summary = "팀 약속 타임테이블 조회")
 	@GetMapping("/{appointmentId}/timetable")
-	public ResponseEntity<AppointmentTimeTableResponseDto> getTeamAppointmentTimeTable(@PathVariable Long teamId, @PathVariable Long appointmentId,
-		@ModelAttribute AppointmentCandidateFilter urlRequest) {
-		return ResponseEntity.ok().build();
+	public ResponseEntity<AppointmentTimeTableResponseDto> getTeamAppointmentTimeTable(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId,
+		@ParameterObject @ModelAttribute AppointmentCandidateFilter urlRequest) {
+		return ResponseEntity.ok(appointmentService.getTeamAppointmentTimeTable(teamId, appointmentId, urlRequest));
 	}
 
 
-	// 팀 일정 마감
+	@Operation(summary = "팀 약속 마감")
 	@PostMapping("/{appointmentId}/close")
-	public ResponseEntity<?> deadlineTeamAppointment(@PathVariable Long teamId, @PathVariable Long appointmentId){
-		return ResponseEntity.ok().build();
+	public ResponseEntity<Void> deadlineTeamAppointment(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId){
+		appointmentService.deadlineTeamAppointment(teamId, appointmentId);
+		return ResponseEntity.noContent().build();
 	}
 
-	// 약속 시간 등록
+	@Operation(summary = "약속 가능 시간 등록")
 	@PostMapping("/{appointmentId}")
-	public ResponseEntity<?> registerTeamAppointmentTime(@PathVariable Long teamId, @PathVariable Long appointmentId, @RequestBody AppointmentTimeRegisterRequestDto request){
-		return ResponseEntity.ok().build();
+	public ResponseEntity<Void> registerTeamAppointmentTime(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId, @RequestBody AppointmentTimeRegisterRequestDto request){
+		appointmentService.registerTeamAppointmentTime(teamId, appointmentId, request);
+		return ResponseEntity.noContent().build();
 	}
 
-	// 약속 삭제 (해당 약속을 만든사람 or 그룹장만 가능)
+	@Operation(summary = "팀 약속 삭제")
 	@DeleteMapping("/{appointmentId}")
-	public ResponseEntity<?> deleteTeamAppointment(@PathVariable Long teamId, @PathVariable Long appointmentId){
-		return ResponseEntity.ok().build();
+	public ResponseEntity<Void> deleteTeamAppointment(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId){
+		appointmentService.deleteTeamAppointment(teamId, appointmentId);
+		return ResponseEntity.noContent().build();
 	}
 
-	// 팀 일정 수정
+	@Operation(summary = "팀 약속 수정")
 	@PutMapping("/{appointmentId}")
-	public ResponseEntity<?> updateTeamAppointment(@PathVariable Long teamId, @PathVariable Long appointmentId,
+	public ResponseEntity<Void> updateTeamAppointment(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId,
 		@RequestBody AppointmentUpdateRequestDto request) {
-		return ResponseEntity.ok().build();
+		appointmentService.updateTeamAppointment(teamId, appointmentId, request);
+		return ResponseEntity.noContent().build();
 	}
 
 }

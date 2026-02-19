@@ -116,6 +116,7 @@ public class DataLoader implements CommandLineRunner {
             // Appointments for Team Alpha
             Appointment app1 = Appointment.builder()
                     .team(teamAlpha)
+                    .createdBy(testMember)
                     .name("Alpha Project Kickoff")
                     .description("Initial meeting for the Alpha project")
                     .address("Online")
@@ -127,6 +128,7 @@ public class DataLoader implements CommandLineRunner {
 
             Appointment app2 = Appointment.builder()
                     .team(teamAlpha)
+                    .createdBy(member1)
                     .name("Alpha Weekly Sync")
                     .description("Regular weekly meeting")
                     .address("Conference Room A")
@@ -187,6 +189,7 @@ public class DataLoader implements CommandLineRunner {
             // Appointments for Team Beta
             Appointment app3 = Appointment.builder()
                     .team(teamBeta)
+                    .createdBy(member1)
                     .name("Beta Feature Discussion")
                     .description("Discuss new features for Beta project")
                     .address("Zoom Call")

@@ -2,6 +2,9 @@ package com.example.tmta.dto.appointment;
 
 import java.util.List;
 
+import lombok.Data;
+
+@Data
 public class AppointmentCandidateFilter {
 
 	// 해당 유저가 참여 가능한 시간대

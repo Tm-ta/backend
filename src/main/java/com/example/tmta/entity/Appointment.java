@@ -39,6 +39,10 @@ public class Appointment extends BaseEntity{
     @JoinColumn(name = "team_id")
     private Team team;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_member_id")
+    private Member createdBy;
+
     @OneToMany(mappedBy = "appointment", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<AppointmentDate> appointmentDateList = new ArrayList<>();
@@ -62,4 +66,27 @@ public class Appointment extends BaseEntity{
     private LocalTime endTime;
     @Enumerated(value = STRING)
     private AppointmentState state;
+
+    public void addAppointmentDate(AppointmentDate appointmentDate) {
+        this.appointmentDateList.add(appointmentDate);
+    }
+
+    public void clearAppointmentDates() {
+        this.appointmentDateList.clear();
+    }
+
+    public void updateBasics(String name, String description, LocalTime startTime, LocalTime endTime) {
+        this.name = name;
+        this.description = description;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
+    public void updateState(AppointmentState state) {
+        this.state = state;
+    }
+
+    public boolean isCreatedBy(Long memberId) {
+        return createdBy != null && createdBy.getId() != null && createdBy.getId().equals(memberId);
+    }
 }
