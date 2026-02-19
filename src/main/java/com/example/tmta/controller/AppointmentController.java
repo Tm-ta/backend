@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -73,7 +74,7 @@ private final AppointmentService appointmentService;
 	}
 
 	// 팀 일정 수정
-	@PostMapping("/{appointmentId}")
+	@PutMapping("/{appointmentId}")
 	public ResponseEntity<?> updateTeamAppointment(@PathVariable Long teamId, @PathVariable Long appointmentId,
 		@RequestBody AppointmentUpdateRequestDto request) {
 		return ResponseEntity.ok().build();
