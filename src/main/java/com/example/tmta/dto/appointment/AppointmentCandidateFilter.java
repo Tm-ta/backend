@@ -1,20 +1,20 @@
 package com.example.tmta.dto.appointment;
 
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+
 import java.util.List;
 
-import lombok.Data;
-
-@Data
-public class AppointmentCandidateFilter {
-
-	// 해당 유저가 참여 가능한 시간대
-	private List<Long> userIds;
-
-	// 해당 유저 수만큼 참여한 시간대
-	private Long availableUserCount;
-
-	// 해당 시간대만큼 가능한 시간대
-	private Long availableTimeSlotCount;
-
-
+@Schema(description = "약속 후보 시간 필터")
+public record AppointmentCandidateFilter(
+		@Parameter(description = "지정한 사용자 ID 목록으로 필터링")
+		@Schema(description = "사용자 ID 목록")
+		List<Long> userIds,
+		@Parameter(description = "해당 인원 수 이상 참여 가능한 시간대만 조회")
+		@Schema(description = "최소 참여 가능 인원", example = "3")
+		Long availableUserCount,
+		@Parameter(description = "조회할 후보 시간 개수 제한")
+		@Schema(description = "후보 시간 개수 제한", example = "10")
+		Long availableTimeSlotCount
+) {
 }

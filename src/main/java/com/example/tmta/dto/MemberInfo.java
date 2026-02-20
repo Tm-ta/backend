@@ -1,18 +1,17 @@
 package com.example.tmta.dto;
 
-import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-@Data
-public class MemberInfo {
-	private String name;
-	private String id;
-	private String profileImageUrl;
-
+@Schema(description = "멤버 정보 DTO")
+public record MemberInfo(
+		@Schema(description = "이름", example = "홍길동")
+		String name,
+		@Schema(description = "멤버 ID", example = "1")
+		String id,
+		@Schema(description = "프로필 이미지 URL", example = "http://example.com/profile.jpg")
+		String profileImageUrl
+) {
 	public static MemberInfo of(Long memberId, String displayName, String profileImageUrl) {
-		MemberInfo info = new MemberInfo();
-		info.setId(String.valueOf(memberId));
-		info.setName(displayName);
-		info.setProfileImageUrl(profileImageUrl);
-		return info;
+		return new MemberInfo(displayName, String.valueOf(memberId), profileImageUrl);
 	}
 }

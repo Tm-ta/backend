@@ -39,13 +39,13 @@ public class AuthService {
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
-        if (memberRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (memberRepository.findByEmail(request.email()).isPresent()) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATION);
         }
 
         Member member = Member.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .email(request.email())
+                .password(passwordEncoder.encode(request.password()))
                 .authProvider(AuthProvider.LOCAL)
                 .role(MemberRole.GENERAL)
                 .emailVerified(false)
@@ -61,17 +61,14 @@ public class AuthService {
 
         memberRepository.save(member);
 
-        return SignUpResponse.builder()
-                .memberId(member.getId())
-                .email(member.getEmail())
-                .build();
+        return new SignUpResponse(member.getId(), member.getEmail());
     }
 
     @Transactional
     public LoginResult login(LoginRequest request) {
         try {
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
             );
 
             UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
@@ -92,11 +89,7 @@ public class AuthService {
                                     .build())
                     );
 
-            AuthResponse response = AuthResponse.builder()
-                    .accessToken(accessToken)
-                    .tokenType("Bearer")
-                    .needsProfileSetup(!member.isProfileSetupCompleted())
-                    .build();
+            AuthResponse response = new AuthResponse(accessToken, "Bearer", !member.isProfileSetupCompleted());
 
             return new LoginResult(response, refreshToken, jwtProperties.refreshTokenValiditySeconds());
         } catch (BadCredentialsException e) {
@@ -138,11 +131,7 @@ public class AuthService {
 
         storedToken.rotate(newRefreshToken, refreshExpiresAt);
 
-        AuthResponse response = AuthResponse.builder()
-                .accessToken(newAccessToken)
-                .tokenType("Bearer")
-                .needsProfileSetup(!member.isProfileSetupCompleted())
-                .build();
+        AuthResponse response = new AuthResponse(newAccessToken, "Bearer", !member.isProfileSetupCompleted());
 
         return new LoginResult(response, newRefreshToken, jwtProperties.refreshTokenValiditySeconds());
     }

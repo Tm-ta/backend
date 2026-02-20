@@ -48,9 +48,7 @@ public class TeamService {
         Member current = getCurrentMemberWithProfile();
         List<TeamMembers> myMemberships = teamMembersRepository.findAllByMemberId(current.getId());
         if (myMemberships.isEmpty()) {
-            TeamListResponseDto response = new TeamListResponseDto();
-            response.setTeamList(List.of());
-            return response;
+            return new TeamListResponseDto(List.of());
         }
 
         List<UUID> teamIds = myMemberships.stream().map(TeamMembers::getTeamId).distinct().toList();
@@ -79,13 +77,6 @@ public class TeamService {
             List<TeamMembers> teamMembers = membersByTeam.getOrDefault(team.getId(), List.of());
             List<Appointment> teamAppointments = appointmentsByTeam.getOrDefault(team.getId(), List.of());
 
-            TeamListResponseDto.TeamInfo info = new TeamListResponseDto.TeamInfo();
-            info.setGroupId(team.getId());
-            info.setGroupName(team.getName());
-            info.setState(teamAppointments.isEmpty() ? AppointmentState.CREATING : teamAppointments.get(0).getState());
-            info.setMemberCount((long) teamMembers.size());
-            info.setMyTeamProfileSetupCompleted(myMembership.isTeamProfileSetupCompleted());
-
             List<String> profiles = new ArrayList<>();
             List<String> names = new ArrayList<>();
             for (TeamMembers membership : teamMembers) {
@@ -101,20 +92,24 @@ public class TeamService {
                 }
                 names.add(displayName);
             }
-            info.setMemberProfiles(profiles);
-            info.setMemberNames(names);
-            teamInfoList.add(info);
+            teamInfoList.add(new TeamListResponseDto.TeamInfo(
+                    team.getId(),
+                    team.getName(),
+                    teamAppointments.isEmpty() ? AppointmentState.CREATING : teamAppointments.get(0).getState(),
+                    (long) teamMembers.size(),
+                    profiles,
+                    names,
+                    myMembership.isTeamProfileSetupCompleted()
+            ));
         }
 
-        TeamListResponseDto response = new TeamListResponseDto();
-        response.setTeamList(teamInfoList);
-        return response;
+        return new TeamListResponseDto(teamInfoList);
     }
 
     @Transactional
     public TeamSaveResponseDto createTeam(TeamSaveRequestDto requestDto) {
         Member current = getCurrentMemberWithProfile();
-        String normalizedTeamName = normalizeTeamName(requestDto.getTeamName());
+        String normalizedTeamName = normalizeTeamName(requestDto.teamName());
 
         Team team = requestDto.toEntity(normalizedTeamName);
         teamRepository.save(team);
@@ -153,14 +148,14 @@ public class TeamService {
                 .map(appointment -> toAppointmentDetail(appointment, memberships.size()))
                 .toList();
 
-        DetailTeamList response = new DetailTeamList();
-        response.setGroupId(team.getId());
-        response.setGroupName(team.getName());
-        response.setMemberCount((long) memberships.size());
-        response.setProfileImage(team.getProfileImage());
-        response.setMembers(members);
-        response.setAppointments(appointmentDetails);
-        return response;
+        return new DetailTeamList(
+                team.getId(),
+                team.getName(),
+                (long) memberships.size(),
+                team.getProfileImage(),
+                appointmentDetails,
+                members
+        );
     }
 
     @Transactional
@@ -190,7 +185,7 @@ public class TeamService {
         getTeam(teamId);
 
         TeamMembers membership = requireMembership(teamId, current.getId());
-        membership.updateTeamProfile(request.getTeamNickName(), request.getTeamProfileImage());
+        membership.updateTeamProfile(request.teamNickName(), request.teamProfileImage());
     }
 
     @Transactional
@@ -273,21 +268,24 @@ public class TeamService {
     }
 
     private DetailTeamList.AppointmentDetail toAppointmentDetail(Appointment appointment, int memberCount) {
-        DetailTeamList.AppointmentDetail detail = new DetailTeamList.AppointmentDetail();
-        detail.setAppointmentId(appointment.getId());
-
         List<LocalDate> dates = appointment.getAppointmentDateList().stream()
                 .map(date -> date.getDate())
                 .sorted(Comparator.naturalOrder())
                 .toList();
+        LocalDate startDate = null;
+        LocalDate endDate = null;
         if (!dates.isEmpty()) {
-            detail.setStartDate(dates.get(0));
-            detail.setEndDate(dates.get(dates.size() - 1));
+            startDate = dates.get(0);
+            endDate = dates.get(dates.size() - 1);
         }
-        detail.setMemberCount((long) memberCount);
-        detail.setState(appointment.getState());
-        detail.setOnlyDate(appointment.isOnlyDate());
-        return detail;
+        return new DetailTeamList.AppointmentDetail(
+                appointment.getId(),
+                startDate,
+                endDate,
+                (long) memberCount,
+                appointment.getState(),
+                appointment.isOnlyDate()
+        );
     }
 
     private String normalizeTeamName(String teamName) {
