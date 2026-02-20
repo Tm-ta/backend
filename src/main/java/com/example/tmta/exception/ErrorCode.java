@@ -14,6 +14,7 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "C003", "서버 내부 오류입니다."),
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "C004", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "C005", "접근 권한이 없습니다."),
+    TERMS_NOT_FOUND(HttpStatus.NOT_FOUND, "C006", "해당 약관을 찾을 수 없습니다."),
 
     // Member
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 회원을 찾을 수 없습니다."),
