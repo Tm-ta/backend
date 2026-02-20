@@ -1,6 +1,5 @@
 package com.example.tmta.service;
 
-import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.dto.team.DetailTeamList;
 import com.example.tmta.dto.team.TeamListResponseDto;
 import com.example.tmta.dto.team.TeamProfileSetupRequestDto;
@@ -10,7 +9,6 @@ import com.example.tmta.entity.Appointment;
 import com.example.tmta.entity.Member;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
-import com.example.tmta.entity.type.AppointmentState;
 import com.example.tmta.entity.type.NamePolicy;
 import com.example.tmta.entity.type.PostPermission;
 import com.example.tmta.entity.type.TeamRole;
@@ -33,6 +31,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class TeamService {
 
     private final TeamRepository teamRepository;

@@ -5,6 +5,6 @@ spring:
 jwt:
   # 운영에서는 반드시 환경변수(JWT_SECRET_BASE64)로 교체하세요.
   secret: ${JWT_SECRET_BASE64:VGhpc0lzQVRlbXBEZXZlbG9wbWVudFNlY3JldEtleUZvclRNVEEyMDI2IQ==}
-  access-token-validity-seconds: 1800
+  access-token-validity-seconds: 3153600000
   refresh-token-validity-seconds: 1209600
   issuer: tmta
