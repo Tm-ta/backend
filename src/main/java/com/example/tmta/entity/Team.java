@@ -11,11 +11,12 @@ import lombok.AllArgsConstructor;
 import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.DynamicInsert;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 @Entity
+@Table(indexes = {
+        @Index(name = "idx_team_name", columnList = "name")
+})
 @Getter
 @DynamicInsert
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -25,14 +26,6 @@ public class Team extends BaseEntity{
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
-
-    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<TeamMembers> teamMembersList = new ArrayList<>();
-
-    @OneToMany(mappedBy = "team", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
-    private List<Appointment> appointmentList = new ArrayList<>();
 
     @Column(length = 20, nullable = false)
     private String name;
@@ -47,7 +40,7 @@ public class Team extends BaseEntity{
     @ColumnDefault("'USE_NICKNAME'")
     private NamePolicy namePolicy;
 
-    public void addTeamMember(TeamMembers teamMembers) {
-        teamMembersList.add(teamMembers);
-    }
+    @Version
+    private Long version;
+
 }

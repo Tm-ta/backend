@@ -1,17 +1,21 @@
 package com.example.tmta.service;
 
+import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.dto.team.DetailTeamList;
-import com.example.tmta.dto.team.TeamProfileSetupRequestDto;
 import com.example.tmta.dto.team.TeamListResponseDto;
+import com.example.tmta.dto.team.TeamProfileSetupRequestDto;
 import com.example.tmta.dto.team.TeamSaveRequestDto;
 import com.example.tmta.dto.team.TeamSaveResponseDto;
+import com.example.tmta.entity.Appointment;
 import com.example.tmta.entity.Member;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
+import com.example.tmta.entity.type.AppointmentState;
 import com.example.tmta.entity.type.InviteState;
 import com.example.tmta.entity.type.TeamRole;
 import com.example.tmta.exception.BusinessException;
 import com.example.tmta.exception.ErrorCode;
+import com.example.tmta.repository.AppointmentRepository;
 import com.example.tmta.repository.MemberRepository;
 import com.example.tmta.repository.TeamMembersRepository;
 import com.example.tmta.repository.TeamRepository;
@@ -20,184 +24,276 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class TeamService {
+
     private final TeamRepository teamRepository;
     private final MemberRepository memberRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final AppointmentRepository appointmentRepository;
     private final CurrentMemberProvider currentMemberProvider;
 
-    @Transactional
-    public void kickMember(java.util.UUID teamId, Long memberId) {
-        Member leader = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(leader);
-
-        Team team = teamRepository.findById(teamId).orElseThrow(
-                () -> new BusinessException(ErrorCode.TEAM_NOT_FOUND)
-        );
-
-        TeamMembers leaderTeamMembers = teamMembersRepository.findByTeamAndMember(team, leader).orElseThrow(
-                () -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM)
-        );
-
-        if (!leaderTeamMembers.getTeamRole().equals(TeamRole.ADMIN)) {
-            throw new BusinessException(ErrorCode.NOT_A_LEADER_OF_TEAM);
+    @Transactional(readOnly = true)
+    public TeamListResponseDto getTeamList() {
+        Member current = getCurrentMemberWithProfile();
+        List<TeamMembers> myMemberships = teamMembersRepository.findAllByMemberId(current.getId());
+        if (myMemberships.isEmpty()) {
+            TeamListResponseDto response = new TeamListResponseDto();
+            response.setTeamList(List.of());
+            return response;
         }
 
-        Member memberToKick = memberRepository.findById(memberId).orElseThrow(
-                () -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND)
-        );
+        List<UUID> teamIds = myMemberships.stream().map(TeamMembers::getTeamId).distinct().toList();
+        Map<UUID, Team> teamMap = teamRepository.findAllById(teamIds).stream()
+                .collect(Collectors.toMap(Team::getId, team -> team));
+        Map<UUID, List<TeamMembers>> membersByTeam = teamMembersRepository.findAllByTeamIdIn(teamIds).stream()
+                .collect(Collectors.groupingBy(TeamMembers::getTeamId));
+        Map<UUID, List<Appointment>> appointmentsByTeam = appointmentRepository.findAllByTeamIdIn(teamIds).stream()
+                .collect(Collectors.groupingBy(Appointment::getTeamId));
 
-        if (leader.equals(memberToKick)) {
-            throw new BusinessException(ErrorCode.CANNOT_KICK_LEADER);
+        List<Long> memberIds = membersByTeam.values().stream()
+                .flatMap(List::stream)
+                .map(TeamMembers::getMemberId)
+                .distinct()
+                .toList();
+        Map<Long, Member> memberMap = memberRepository.findAllById(memberIds).stream()
+                .collect(Collectors.toMap(Member::getId, member -> member));
+
+        List<TeamListResponseDto.TeamInfo> teamInfoList = new ArrayList<>();
+        for (TeamMembers myMembership : myMemberships) {
+            Team team = teamMap.get(myMembership.getTeamId());
+            if (team == null) {
+                continue;
+            }
+
+            List<TeamMembers> teamMembers = membersByTeam.getOrDefault(team.getId(), List.of());
+            List<Appointment> teamAppointments = appointmentsByTeam.getOrDefault(team.getId(), List.of());
+
+            TeamListResponseDto.TeamInfo info = new TeamListResponseDto.TeamInfo();
+            info.setGroupId(team.getId());
+            info.setGroupName(team.getName());
+            info.setState(teamAppointments.isEmpty() ? AppointmentState.CREATING : teamAppointments.get(0).getState());
+            info.setMemberCount((long) teamMembers.size());
+            info.setMyTeamProfileSetupCompleted(myMembership.isTeamProfileSetupCompleted());
+
+            List<String> profiles = new ArrayList<>();
+            List<String> names = new ArrayList<>();
+            for (TeamMembers membership : teamMembers) {
+                Member member = memberMap.get(membership.getMemberId());
+                if (member == null) {
+                    continue;
+                }
+                profiles.add(membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage());
+
+                String displayName = membership.getTeamNickName() != null ? membership.getTeamNickName() : member.getNickName();
+                if (displayName == null) {
+                    displayName = member.getName();
+                }
+                names.add(displayName);
+            }
+            info.setMemberProfiles(profiles);
+            info.setMemberNames(names);
+            teamInfoList.add(info);
         }
 
-        TeamMembers memberToKickTeamMembers = teamMembersRepository.findByTeamAndMember(team, memberToKick).orElseThrow(
-                () -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM)
-        );
-
-        teamMembersRepository.delete(memberToKickTeamMembers);
+        TeamListResponseDto response = new TeamListResponseDto();
+        response.setTeamList(teamInfoList);
+        return response;
     }
 
     @Transactional
-    public void delegateLeader(java.util.UUID teamId, Long memberId) {
-        Member leader = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(leader);
+    public TeamSaveResponseDto createTeam(TeamSaveRequestDto requestDto) {
+        Member current = getCurrentMemberWithProfile();
+        String normalizedTeamName = normalizeTeamName(requestDto.getTeamName());
 
-        Team team = teamRepository.findById(teamId).orElseThrow(
-                () -> new BusinessException(ErrorCode.TEAM_NOT_FOUND)
-        );
+        Team team = requestDto.toEntity(normalizedTeamName);
+        teamRepository.save(team);
 
-        TeamMembers leaderTeamMembers = teamMembersRepository.findByTeamAndMember(team, leader).orElseThrow(
-                () -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM)
-        );
+        TeamMembers creatorMembership = TeamMembers.builder()
+                .teamId(team.getId())
+                .memberId(current.getId())
+                .inviteState(InviteState.ACCEPT)
+                .teamRole(TeamRole.ADMIN)
+                .teamNickName(current.getNickName())
+                .teamProfileImage(current.getProfileImage())
+                .teamProfileSetupCompleted(true)
+                .build();
+        teamMembersRepository.save(creatorMembership);
 
-        if (!leaderTeamMembers.getTeamRole().equals(TeamRole.ADMIN)) {
-            throw new BusinessException(ErrorCode.NOT_A_LEADER_OF_TEAM);
-        }
+        return new TeamSaveResponseDto(team);
+    }
 
-        Member newLeader = memberRepository.findById(memberId).orElseThrow(
-                () -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND)
-        );
-        TeamMembers newLeaderTeamMembers = teamMembersRepository.findByTeamAndMember(team, newLeader).orElseThrow(
-                () -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM)
-        );
+    @Transactional(readOnly = true)
+    public DetailTeamList getDetailTeam(UUID teamId) {
+        Member current = getCurrentMemberWithProfile();
+        Team team = getTeam(teamId);
+        requireMembership(teamId, current.getId());
 
-        leaderTeamMembers.updateTeamRole(TeamRole.GENERAL);
-        newLeaderTeamMembers.updateTeamRole(TeamRole.ADMIN);
+        List<TeamMembers> memberships = teamMembersRepository.findAllByTeamId(teamId);
+        List<Long> memberIds = memberships.stream().map(TeamMembers::getMemberId).distinct().toList();
+        Map<Long, Member> memberMap = memberRepository.findAllById(memberIds).stream()
+                .collect(Collectors.toMap(Member::getId, member -> member));
+
+        List<MemberInfo> members = memberships.stream()
+                .map(membership -> toMemberInfo(membership, memberMap.get(membership.getMemberId())))
+                .toList();
+
+        List<Appointment> appointments = appointmentRepository.findAllByTeamId(teamId);
+        List<DetailTeamList.AppointmentDetail> appointmentDetails = appointments.stream()
+                .map(appointment -> toAppointmentDetail(appointment, memberships.size()))
+                .toList();
+
+        DetailTeamList response = new DetailTeamList();
+        response.setGroupId(team.getId());
+        response.setGroupName(team.getName());
+        response.setMemberCount((long) memberships.size());
+        response.setProfileImage(team.getProfileImage());
+        response.setMembers(members);
+        response.setAppointments(appointmentDetails);
+        return response;
     }
 
     @Transactional
-    public void exitTeam(java.util.UUID teamId) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+    public void joinTeam(UUID teamId) {
+        Member current = getCurrentMemberWithProfile();
+        getTeam(teamId);
 
-        Team team = teamRepository.findById(teamId).orElseThrow(
-                () -> new BusinessException(ErrorCode.TEAM_NOT_FOUND)
-        );
-
-        TeamMembers teamMembers = teamMembersRepository.findByTeamAndMember(team, member).orElseThrow(
-                () -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM)
-        );
-
-        if (teamMembers.getTeamRole().equals(TeamRole.ADMIN)) {
-            throw new BusinessException(ErrorCode.LEADER_CANNOT_EXIT_TEAM);
-        }
-
-        teamMembersRepository.delete(teamMembers);
-    }
-
-    @Transactional
-    public void joinTeam(java.util.UUID teamId) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
-
-        Team team = teamRepository.findById(teamId).orElseThrow(
-                () -> new BusinessException(ErrorCode.TEAM_NOT_FOUND)
-        );
-
-        if (teamMembersRepository.findByTeamAndMember(team, member).isPresent()) {
+        if (teamMembersRepository.existsByTeamIdAndMemberId(teamId, current.getId())) {
             throw new BusinessException(ErrorCode.ALREADY_JOINED_TEAM);
         }
 
-        TeamMembers teamMembers = TeamMembers.builder()
-                .team(team)
-                .member(member)
+        TeamMembers membership = TeamMembers.builder()
+                .teamId(teamId)
+                .memberId(current.getId())
                 .inviteState(InviteState.PENDING)
                 .teamRole(TeamRole.GENERAL)
                 .teamNickName(null)
                 .teamProfileImage(null)
                 .teamProfileSetupCompleted(false)
                 .build();
-        teamMembersRepository.save(teamMembers);
+        teamMembersRepository.save(membership);
     }
 
     @Transactional
-    public void setupMyTeamProfile(java.util.UUID teamId, TeamProfileSetupRequestDto request) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+    public void setupMyTeamProfile(UUID teamId, TeamProfileSetupRequestDto request) {
+        Member current = getCurrentMemberWithProfile();
+        getTeam(teamId);
 
-        Team team = teamRepository.findById(teamId).orElseThrow(
-                () -> new BusinessException(ErrorCode.TEAM_NOT_FOUND)
-        );
-
-        TeamMembers teamMembers = teamMembersRepository.findByTeamAndMember(team, member).orElseThrow(
-                () -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM)
-        );
-
-        // join 이후 최초 설정/수정 모두 동일 API로 처리합니다.
-        teamMembers.updateTeamProfile(request.getTeamNickName(), request.getTeamProfileImage());
-    }
-
-    @Transactional(readOnly = true)
-    public DetailTeamList getDetailTeam(java.util.UUID teamId) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
-
-        Team team = teamRepository.findById(teamId).orElseThrow(
-                () -> new BusinessException(ErrorCode.TEAM_NOT_FOUND)
-        );
-        return new DetailTeamList(team);
-    }
-
-    @Transactional(readOnly = true)
-    public TeamListResponseDto getTeamList() {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
-
-        List<TeamMembers> teamMembers = teamMembersRepository.findAllByMember(member);
-        return new TeamListResponseDto(teamMembers);
+        TeamMembers membership = requireMembership(teamId, current.getId());
+        membership.updateTeamProfile(request.getTeamNickName(), request.getTeamProfileImage());
     }
 
     @Transactional
-    public TeamSaveResponseDto createTeam(TeamSaveRequestDto requestDto) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+    public void exitTeam(UUID teamId) {
+        Member current = getCurrentMemberWithProfile();
+        getTeam(teamId);
 
-        Team team = requestDto.toEntity();
-        teamRepository.save(team);
+        TeamMembers membership = requireMembership(teamId, current.getId());
+        if (membership.getTeamRole() == TeamRole.ADMIN) {
+            throw new BusinessException(ErrorCode.LEADER_CANNOT_EXIT_TEAM);
+        }
 
-        TeamMembers teamMembers = TeamMembers.builder()
-                .team(team)
-                .member(member)
-                .inviteState(InviteState.ACCEPT)
-                .teamRole(TeamRole.ADMIN)
-                .teamNickName(member.getNickName())
-                .teamProfileImage(member.getProfileImage())
-                .teamProfileSetupCompleted(true)
-                .build();
-        teamMembersRepository.save(teamMembers);
-
-        team.addTeamMember(teamMembers);
-        return new TeamSaveResponseDto(team);
+        teamMembersRepository.delete(membership);
     }
 
-    private void requireProfileSetupCompleted(Member member) {
-        if (!member.isProfileSetupCompleted()) {
+    @Transactional
+    public void delegateLeader(UUID teamId, Long memberId) {
+        Member currentLeader = getCurrentMemberWithProfile();
+        getTeam(teamId);
+
+        TeamMembers leaderMembership = requireMembership(teamId, currentLeader.getId());
+        requireLeader(leaderMembership);
+
+        memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        TeamMembers newLeaderMembership = requireMembership(teamId, memberId);
+        leaderMembership.updateTeamRole(TeamRole.GENERAL);
+        newLeaderMembership.updateTeamRole(TeamRole.ADMIN);
+    }
+
+    @Transactional
+    public void kickMember(UUID teamId, Long memberId) {
+        Member currentLeader = getCurrentMemberWithProfile();
+        getTeam(teamId);
+
+        TeamMembers leaderMembership = requireMembership(teamId, currentLeader.getId());
+        requireLeader(leaderMembership);
+        if (currentLeader.getId().equals(memberId)) {
+            throw new BusinessException(ErrorCode.CANNOT_KICK_LEADER);
+        }
+
+        memberRepository.findById(memberId).orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
+        TeamMembers targetMembership = requireMembership(teamId, memberId);
+        teamMembersRepository.delete(targetMembership);
+    }
+
+    private Member getCurrentMemberWithProfile() {
+        Member current = currentMemberProvider.getCurrentMember();
+        if (!current.isProfileSetupCompleted()) {
             throw new BusinessException(ErrorCode.PROFILE_SETUP_REQUIRED);
         }
+        return current;
+    }
+
+    private Team getTeam(UUID teamId) {
+        return teamRepository.findById(teamId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.TEAM_NOT_FOUND));
+    }
+
+    private TeamMembers requireMembership(UUID teamId, Long memberId) {
+        return teamMembersRepository.findByTeamIdAndMemberId(teamId, memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM));
+    }
+
+    private void requireLeader(TeamMembers membership) {
+        if (membership.getTeamRole() != TeamRole.ADMIN) {
+            throw new BusinessException(ErrorCode.NOT_A_LEADER_OF_TEAM);
+        }
+    }
+
+    private MemberInfo toMemberInfo(TeamMembers membership, Member member) {
+        if (member == null) {
+            return MemberInfo.of(membership.getMemberId(), null, null);
+        }
+        String displayName = membership.getTeamNickName() != null ? membership.getTeamNickName() : member.getNickName();
+        if (displayName == null) {
+            displayName = member.getName();
+        }
+        String profileImage = membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage();
+        return MemberInfo.of(member.getId(), displayName, profileImage);
+    }
+
+    private DetailTeamList.AppointmentDetail toAppointmentDetail(Appointment appointment, int memberCount) {
+        DetailTeamList.AppointmentDetail detail = new DetailTeamList.AppointmentDetail();
+        detail.setAppointmentId(appointment.getId());
+
+        List<LocalDate> dates = appointment.getAppointmentDateList().stream()
+                .map(date -> date.getDate())
+                .sorted(Comparator.naturalOrder())
+                .toList();
+        if (!dates.isEmpty()) {
+            detail.setStartDate(dates.get(0));
+            detail.setEndDate(dates.get(dates.size() - 1));
+        }
+        detail.setMemberCount((long) memberCount);
+        detail.setState(appointment.getState());
+        detail.setOnlyDate(appointment.isOnlyDate());
+        return detail;
+    }
+
+    private String normalizeTeamName(String teamName) {
+        if (teamName == null || teamName.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        return teamName.trim();
     }
 }

@@ -11,6 +11,15 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
+@Table(
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_appointment_date", columnNames = {"appointment_id", "date"})
+        },
+        indexes = {
+                @Index(name = "idx_appointment_date_appointment", columnList = "appointment_id"),
+                @Index(name = "idx_appointment_date_date", columnList = "date")
+        }
+)
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AppointmentDate extends BaseEntity{
@@ -18,10 +27,11 @@ public class AppointmentDate extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private LocalDate date;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "appointment_id")
+    @JoinColumn(name = "appointment_id", nullable = false)
     private Appointment appointment;
 
     @OneToMany(mappedBy = "appointmentDate", cascade = CascadeType.ALL, orphanRemoval = true)

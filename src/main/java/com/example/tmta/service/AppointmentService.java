@@ -1,5 +1,6 @@
 package com.example.tmta.service;
 
+import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.dto.appointment.AppointmentCandidateFilter;
 import com.example.tmta.dto.appointment.AppointmentDetailResponseDto;
 import com.example.tmta.dto.appointment.AppointmentListResponseDto;
@@ -9,9 +10,9 @@ import com.example.tmta.dto.appointment.AppointmentTimeTableResponseDto;
 import com.example.tmta.dto.appointment.AppointmentUpdateRequestDto;
 import com.example.tmta.entity.Appointment;
 import com.example.tmta.entity.AppointmentDate;
+import com.example.tmta.entity.AppointmentSetting;
 import com.example.tmta.entity.AvailableTime;
 import com.example.tmta.entity.Member;
-import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import com.example.tmta.entity.type.AppointmentState;
 import com.example.tmta.entity.type.TeamRole;
@@ -20,20 +21,21 @@ import com.example.tmta.exception.ErrorCode;
 import com.example.tmta.repository.AppointmentDateRepository;
 import com.example.tmta.repository.AppointmentRepository;
 import com.example.tmta.repository.AvailableTimeRepository;
+import com.example.tmta.repository.MemberRepository;
 import com.example.tmta.repository.TeamMembersRepository;
 import com.example.tmta.repository.TeamRepository;
 import com.example.tmta.security.CurrentMemberProvider;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import lombok.RequiredArgsConstructor;
 
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -45,56 +47,62 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class AppointmentService {
 
+    private static final LocalTime DEFAULT_START_TIME = LocalTime.MIN;
+    private static final LocalTime DEFAULT_END_TIME = LocalTime.of(23, 59);
+
     private final AppointmentRepository appointmentRepository;
     private final AppointmentDateRepository appointmentDateRepository;
     private final AvailableTimeRepository availableTimeRepository;
     private final TeamRepository teamRepository;
     private final TeamMembersRepository teamMembersRepository;
+    private final MemberRepository memberRepository;
     private final CurrentMemberProvider currentMemberProvider;
 
     @Transactional
     public UUID createTeamAppointment(UUID teamId, AppointmentSaveRequestDto request) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        requireMembership(teamId, current.getId());
 
-        Team team = getTeam(teamId);
-        requireTeamMember(team, member);
-
-        List<LocalDate> appointmentDates = normalizeDates(request.getAppointmentDates());
-        validateName(request.getName());
+        validateAppointmentCommand(request.getName(), request.getAppointmentDates(), request.isOnlyDate(), request.getStartTime(), request.getEndTime());
 
         Appointment appointment = Appointment.builder()
-                .team(team)
-                .createdBy(member)
+                .teamId(teamId)
+                .createdByMemberId(current.getId())
                 .name(request.getName().trim())
                 .description(request.getDescription())
-                .address(null)
                 .startTime(resolveStartTime(request.isOnlyDate(), request.getStartTime()))
                 .endTime(resolveEndTime(request.isOnlyDate(), request.getEndTime()))
                 .state(AppointmentState.SCHEDULING)
                 .build();
+        appointment.assignSetting(AppointmentSetting.of(appointment, request.isOnlyDate(), request.getDeadlineDateTime()));
+        toDistinctSortedDates(request.getAppointmentDates())
+                .forEach(date -> appointment.addAppointmentDate(AppointmentDate.of(appointment, date)));
 
-        appointmentDates.forEach(date -> appointment.addAppointmentDate(AppointmentDate.of(appointment, date)));
-
-        Appointment saved = appointmentRepository.save(appointment);
-        return saved.getId();
+        return appointmentRepository.save(appointment).getId();
     }
 
     @Transactional(readOnly = true)
     public AppointmentDetailResponseDto getTeamAppointmentDetail(UUID teamId, UUID appointmentId) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        requireMembership(teamId, current.getId());
 
-        Team team = getTeam(teamId);
-        requireTeamMember(team, member);
-        Appointment appointment = getAppointment(teamId, appointmentId);
+        Appointment appointment = getAppointmentDetail(teamId, appointmentId);
+        List<TeamMembers> memberships = teamMembersRepository.findAllByTeamId(teamId);
+        List<Long> memberIds = memberships.stream().map(TeamMembers::getMemberId).distinct().toList();
+        Map<Long, Member> memberMap = memberRepository.findAllById(memberIds).stream()
+                .collect(Collectors.toMap(Member::getId, member -> member));
 
         AppointmentDetailResponseDto response = new AppointmentDetailResponseDto();
         response.setName(appointment.getName());
         response.setDescription(appointment.getDescription());
         response.setState(appointment.getState());
-        response.setMemberCount((long) teamMembersRepository.findAllByTeam(team).size());
-        response.setOrganizerName(resolveOrganizerName(team, appointment));
+        response.setMemberCount((long) memberships.size());
+        response.setOrganizerName(resolveOrganizerName(appointment, memberMap, memberships));
+        response.setMember(memberships.stream()
+                .map(membership -> toMemberInfo(membership, memberMap.get(membership.getMemberId())))
+                .toList());
 
         List<LocalDate> dates = appointment.getAppointmentDateList().stream()
                 .map(AppointmentDate::getDate)
@@ -104,146 +112,154 @@ public class AppointmentService {
             response.setStartDate(dates.get(0));
             response.setEndDate(dates.get(dates.size() - 1));
         }
-
-        List<String> memberNames = teamMembersRepository.findAllByTeam(team).stream()
-                .map(tm -> tm.getTeamNickName() != null ? tm.getTeamNickName() : tm.getMember().getNickName())
-                .filter(Objects::nonNull)
-                .toList();
-        response.setMember(memberNames);
-
+        if (appointment.getState() == AppointmentState.CONFIRMED || appointment.getState() == AppointmentState.COMPLETE) {
+            response.setConfirmedDate(appointment.getConfirmedDate());
+        }
         return response;
     }
 
     @Transactional(readOnly = true)
     public AppointmentListResponseDto getTeamAppointmentCandidate(UUID teamId, UUID appointmentId, AppointmentCandidateFilter filter) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        requireMembership(teamId, current.getId());
+        Appointment appointment = getAppointmentDetail(teamId, appointmentId);
 
-        Team team = getTeam(teamId);
-        requireTeamMember(team, member);
-        Appointment appointment = getAppointment(teamId, appointmentId);
-
-        List<SlotAggregate> aggregates = aggregateSlots(appointment);
-        List<SlotAggregate> filtered = applyFilter(aggregates, filter);
-
+        List<SlotAggregate> filtered = applyCandidateFilter(aggregateAvailableSlots(appointment), filter);
         AppointmentListResponseDto response = new AppointmentListResponseDto();
         response.setAppointmentId(appointmentId);
-        response.setAvailableSlots(toAvailableSlots(filtered));
+        response.setAvailableSlots(filtered.stream().map(this::toAvailableDateTime).toList());
         return response;
     }
 
     @Transactional(readOnly = true)
     public AppointmentTimeTableResponseDto getTeamAppointmentTimeTable(UUID teamId, UUID appointmentId, AppointmentCandidateFilter filter) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        requireMembership(teamId, current.getId());
+        Appointment appointment = getAppointmentDetail(teamId, appointmentId);
 
-        Team team = getTeam(teamId);
-        requireTeamMember(team, member);
-        Appointment appointment = getAppointment(teamId, appointmentId);
-
-        List<SlotAggregate> aggregates = applyFilter(aggregateSlots(appointment), filter);
-
+        List<SlotAggregate> filtered = applyCandidateFilter(aggregateAvailableSlots(appointment), filter);
         AppointmentTimeTableResponseDto response = new AppointmentTimeTableResponseDto();
         response.setAppointmentId(appointmentId);
-        response.setAvailableDateTimeSlots(toTimeTableSlots(aggregates));
+        response.setAvailableDateTimeSlots(filtered.stream().map(this::toTimeTableSlot).toList());
         return response;
     }
 
     @Transactional
     public void deadlineTeamAppointment(UUID teamId, UUID appointmentId) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
-
-        Team team = getTeam(teamId);
-        TeamMembers me = requireTeamMember(team, member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        TeamMembers membership = requireMembership(teamId, current.getId());
         Appointment appointment = getAppointment(teamId, appointmentId);
-        requireCanManageAppointment(me, appointment, member);
+        requireCanManageAppointment(membership, appointment, current.getId());
+
+        if (appointment.getState() != AppointmentState.SCHEDULING && appointment.getState() != AppointmentState.CREATING) {
+            throw new BusinessException(ErrorCode.INVALID_APPOINTMENT_STATE);
+        }
         appointment.updateState(AppointmentState.SCHEDULING_CLOSED);
     }
 
     @Transactional
     public void registerTeamAppointmentTime(UUID teamId, UUID appointmentId, AppointmentTimeRegisterRequestDto request) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
-
-        Team team = getTeam(teamId);
-        requireTeamMember(team, member);
-        Appointment appointment = getAppointment(teamId, appointmentId);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        requireMembership(teamId, current.getId());
+        Appointment appointment = getAppointmentDetail(teamId, appointmentId);
 
         if (request == null || request.getTimeSlots() == null || request.getTimeSlots().isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
+        if (appointment.getState() != AppointmentState.SCHEDULING && appointment.getState() != AppointmentState.CREATING) {
+            throw new BusinessException(ErrorCode.INVALID_APPOINTMENT_STATE);
+        }
 
-        Map<LocalDate, AppointmentDate> appointmentDateByDate = appointment.getAppointmentDateList().stream()
+        Map<LocalDate, AppointmentDate> dateMap = appointment.getAppointmentDateList().stream()
                 .collect(Collectors.toMap(AppointmentDate::getDate, d -> d));
 
-        List<AppointmentTimeRegisterRequestDto.TimeSlot> validSlots = request.getTimeSlots().stream()
-                .filter(slot -> slot != null && slot.getDate() != null && slot.getTime() != null)
-                .toList();
-        if (validSlots.isEmpty()) {
+        availableTimeRepository.deleteAllByAppointmentDateAppointmentAndMemberId(appointment, current.getId());
+
+        Map<LocalDate, List<LocalTime>> grouped = new HashMap<>();
+        for (AppointmentTimeRegisterRequestDto.TimeSlot slot : request.getTimeSlots()) {
+            if (slot == null || slot.getDate() == null || slot.getTime() == null) {
+                continue;
+            }
+            if (!dateMap.containsKey(slot.getDate())) {
+                throw new BusinessException(ErrorCode.APPOINTMENT_DATE_MISMATCH);
+            }
+            if (isOutOfRange(slot.getTime(), appointment.getStartTime(), appointment.getEndTime())) {
+                throw new BusinessException(ErrorCode.APPOINTMENT_TIME_OUT_OF_RANGE);
+            }
+            grouped.computeIfAbsent(slot.getDate(), ignored -> new ArrayList<>()).add(slot.getTime());
+        }
+        if (grouped.isEmpty()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
         }
 
-        availableTimeRepository.deleteAllByAppointmentDateAppointmentAndMember(appointment, member);
-
-        Map<LocalDate, List<LocalTime>> groupedByDate = validSlots.stream()
-                .collect(Collectors.groupingBy(
-                        AppointmentTimeRegisterRequestDto.TimeSlot::getDate,
-                        Collectors.mapping(AppointmentTimeRegisterRequestDto.TimeSlot::getTime, Collectors.toList())
-                ));
-
-        for (Map.Entry<LocalDate, List<LocalTime>> entry : groupedByDate.entrySet()) {
-            AppointmentDate appointmentDate = appointmentDateByDate.get(entry.getKey());
-            if (appointmentDate == null) {
-                continue;
-            }
-
+        for (Map.Entry<LocalDate, List<LocalTime>> entry : grouped.entrySet()) {
+            AppointmentDate date = dateMap.get(entry.getKey());
             List<LocalTime> times = entry.getValue().stream().distinct().sorted().toList();
             for (TimeRange range : compressToRanges(times)) {
-                availableTimeRepository.save(AvailableTime.of(member, appointmentDate, range.start(), range.end()));
+                availableTimeRepository.save(AvailableTime.of(current.getId(), date, range.start(), range.end()));
             }
         }
     }
 
     @Transactional
     public void deleteTeamAppointment(UUID teamId, UUID appointmentId) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
-
-        Team team = getTeam(teamId);
-        TeamMembers me = requireTeamMember(team, member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        TeamMembers membership = requireMembership(teamId, current.getId());
         Appointment appointment = getAppointment(teamId, appointmentId);
-        requireCanManageAppointment(me, appointment, member);
+        requireCanManageAppointment(membership, appointment, current.getId());
         appointmentRepository.delete(appointment);
     }
 
     @Transactional
     public void updateTeamAppointment(UUID teamId, UUID appointmentId, AppointmentUpdateRequestDto request) {
-        Member member = currentMemberProvider.getCurrentMember();
-        requireProfileSetupCompleted(member);
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        TeamMembers membership = requireMembership(teamId, current.getId());
+        Appointment appointment = getAppointmentDetail(teamId, appointmentId);
+        requireCanManageAppointment(membership, appointment, current.getId());
 
-        Team team = getTeam(teamId);
-        TeamMembers me = requireTeamMember(team, member);
-        Appointment appointment = getAppointment(teamId, appointmentId);
-        requireCanManageAppointment(me, appointment, member);
-        validateName(request.getName());
-
-        List<LocalDate> appointmentDates = normalizeDates(request.getAppointmentDates());
+        validateAppointmentCommand(request.getName(), request.getAppointmentDates(), request.isOnlyDate(), request.getStartTime(), request.getEndTime());
         appointment.updateBasics(
                 request.getName().trim(),
                 request.getDescription(),
                 resolveStartTime(request.isOnlyDate(), request.getStartTime()),
                 resolveEndTime(request.isOnlyDate(), request.getEndTime())
         );
+        if (appointment.getSetting() == null) {
+            appointment.assignSetting(AppointmentSetting.of(appointment, request.isOnlyDate(), request.getDeadlineDateTime()));
+        } else {
+            appointment.getSetting().update(request.isOnlyDate(), request.getDeadlineDateTime());
+        }
 
         availableTimeRepository.deleteAllByAppointmentDateAppointment(appointment);
         appointmentDateRepository.deleteAllByAppointment(appointment);
         appointment.clearAppointmentDates();
-        appointmentDates.forEach(date -> appointment.addAppointmentDate(AppointmentDate.of(appointment, date)));
+        toDistinctSortedDates(request.getAppointmentDates())
+                .forEach(date -> appointment.addAppointmentDate(AppointmentDate.of(appointment, date)));
     }
 
-    private Team getTeam(UUID teamId) {
-        return teamRepository.findById(teamId).orElseThrow(() -> new BusinessException(ErrorCode.TEAM_NOT_FOUND));
+    private Member getCurrentMemberWithProfile() {
+        Member current = currentMemberProvider.getCurrentMember();
+        if (!current.isProfileSetupCompleted()) {
+            throw new BusinessException(ErrorCode.PROFILE_SETUP_REQUIRED);
+        }
+        return current;
+    }
+
+    private void ensureTeamExists(UUID teamId) {
+        if (!teamRepository.existsById(teamId)) {
+            throw new BusinessException(ErrorCode.TEAM_NOT_FOUND);
+        }
+    }
+
+    private TeamMembers requireMembership(UUID teamId, Long memberId) {
+        return teamMembersRepository.findByTeamIdAndMemberId(teamId, memberId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM));
     }
 
     private Appointment getAppointment(UUID teamId, UUID appointmentId) {
@@ -251,163 +267,170 @@ public class AppointmentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.APPOINTMENT_NOT_FOUND));
     }
 
-    private TeamMembers requireTeamMember(Team team, Member member) {
-        return teamMembersRepository.findByTeamAndMember(team, member)
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM));
+    private Appointment getAppointmentDetail(UUID teamId, UUID appointmentId) {
+        return appointmentRepository.findDetailByIdAndTeamId(appointmentId, teamId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.APPOINTMENT_NOT_FOUND));
     }
 
-    private void requireProfileSetupCompleted(Member member) {
-        if (!member.isProfileSetupCompleted()) {
-            throw new BusinessException(ErrorCode.PROFILE_SETUP_REQUIRED);
-        }
-    }
-
-    private void validateName(String name) {
-        if (name == null || name.isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-    }
-
-    private List<LocalDate> normalizeDates(List<LocalDate> dates) {
-        if (dates == null || dates.isEmpty()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-        return dates.stream()
-                .filter(Objects::nonNull)
-                .distinct()
-                .sorted()
-                .toList();
-    }
-
-    private LocalTime resolveStartTime(boolean onlyDate, LocalTime requestStartTime) {
-        return onlyDate ? LocalTime.MIN : (requestStartTime == null ? LocalTime.MIN : requestStartTime);
-    }
-
-    private LocalTime resolveEndTime(boolean onlyDate, LocalTime requestEndTime) {
-        return onlyDate ? LocalTime.of(23, 59) : (requestEndTime == null ? LocalTime.of(23, 59) : requestEndTime);
-    }
-
-    private void requireCanManageAppointment(TeamMembers me, Appointment appointment, Member member) {
-        boolean isAdmin = me.getTeamRole() == TeamRole.ADMIN;
-        boolean isCreator = appointment.isCreatedBy(member.getId());
+    private void requireCanManageAppointment(TeamMembers membership, Appointment appointment, Long currentMemberId) {
+        boolean isAdmin = membership.getTeamRole() == TeamRole.ADMIN;
+        boolean isCreator = appointment.isCreatedBy(currentMemberId);
         if (!isAdmin && !isCreator) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
     }
 
-    private String resolveOrganizerName(Team team, Appointment appointment) {
-        Member creator = appointment.getCreatedBy();
+    private void validateAppointmentCommand(String name, List<LocalDate> dates, boolean onlyDate, LocalTime startTime, LocalTime endTime) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (dates == null || dates.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (!onlyDate && startTime != null && endTime != null && !endTime.isAfter(startTime)) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+    }
+
+    private List<LocalDate> toDistinctSortedDates(List<LocalDate> dates) {
+        return dates.stream().filter(Objects::nonNull).distinct().sorted().toList();
+    }
+
+    private LocalTime resolveStartTime(boolean onlyDate, LocalTime time) {
+        return onlyDate ? DEFAULT_START_TIME : (time == null ? DEFAULT_START_TIME : time);
+    }
+
+    private LocalTime resolveEndTime(boolean onlyDate, LocalTime time) {
+        return onlyDate ? DEFAULT_END_TIME : (time == null ? DEFAULT_END_TIME : time);
+    }
+
+    private boolean isOutOfRange(LocalTime time, LocalTime startTime, LocalTime endTime) {
+        return time.isBefore(startTime) || !time.isBefore(endTime);
+    }
+
+    private String resolveOrganizerName(Appointment appointment, Map<Long, Member> memberMap, List<TeamMembers> memberships) {
+        Member creator = memberMap.get(appointment.getCreatedByMemberId());
         if (creator == null) {
-            return resolveLeaderName(team);
+            TeamMembers leader = memberships.stream()
+                    .filter(m -> m.getTeamRole() == TeamRole.ADMIN)
+                    .findFirst()
+                    .orElse(null);
+            if (leader == null) {
+                return null;
+            }
+            Member leaderMember = memberMap.get(leader.getMemberId());
+            return leaderMember == null ? null : (leaderMember.getNickName() != null ? leaderMember.getNickName() : leaderMember.getName());
+        }
+        return creator.getNickName() != null ? creator.getNickName() : creator.getName();
+    }
+
+    private MemberInfo toMemberInfo(TeamMembers membership, Member member) {
+        if (member == null) {
+            return MemberInfo.of(membership.getMemberId(), null, null);
+        }
+        String displayName = membership.getTeamNickName() != null ? membership.getTeamNickName() : member.getNickName();
+        if (displayName == null) {
+            displayName = member.getName();
+        }
+        String profile = membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage();
+        return MemberInfo.of(member.getId(), displayName, profile);
+    }
+
+    private List<SlotAggregate> aggregateAvailableSlots(Appointment appointment) {
+        List<AvailableTime> times = availableTimeRepository.findAllByAppointmentDateAppointment(appointment);
+        Map<SlotKey, SlotAggregate> grouped = new HashMap<>();
+        for (AvailableTime time : times) {
+            SlotKey key = new SlotKey(time.getAppointmentDate().getDate(), time.getStartTime(), time.getEndTime());
+            SlotAggregate aggregate = grouped.computeIfAbsent(key, k -> new SlotAggregate(k.date(), k.startTime(), k.endTime()));
+            aggregate.memberIds.add(time.getMemberId());
         }
 
-        return teamMembersRepository.findByTeamAndMember(team, creator)
-                .map(tm -> tm.getTeamNickName() != null ? tm.getTeamNickName() : tm.getMember().getNickName())
-                .orElseGet(() -> creator.getNickName() != null ? creator.getNickName() : creator.getName());
-    }
+        Map<Long, Member> memberMap = memberRepository.findAllById(
+                grouped.values().stream().flatMap(s -> s.memberIds.stream()).distinct().toList()
+        ).stream().collect(Collectors.toMap(Member::getId, member -> member));
 
-    private String resolveLeaderName(Team team) {
-        return teamMembersRepository.findAllByTeam(team).stream()
-                .filter(tm -> tm.getTeamRole() == TeamRole.ADMIN)
-                .findFirst()
-                .map(tm -> tm.getTeamNickName() != null ? tm.getTeamNickName() : tm.getMember().getNickName())
-                .orElse(null);
-    }
-
-    private List<SlotAggregate> aggregateSlots(Appointment appointment) {
-        List<AvailableTime> availableTimes = availableTimeRepository.findAllByAppointmentDateAppointment(appointment);
-        Map<SlotKey, SlotAggregate> map = new LinkedHashMap<>();
-
-        for (AvailableTime availableTime : availableTimes) {
-            SlotKey key = new SlotKey(availableTime.getAppointmentDate().getDate(), availableTime.getStartTime(), availableTime.getEndTime());
-            SlotAggregate aggregate = map.computeIfAbsent(key, k -> new SlotAggregate(k.date(), k.start(), k.end()));
-            Member availableMember = availableTime.getMember();
-            aggregate.memberIds.add(availableMember.getId());
-            String displayName = availableMember.getNickName() != null ? availableMember.getNickName() : availableMember.getName();
-            if (displayName != null) {
-                aggregate.memberNames.add(displayName);
+        for (SlotAggregate aggregate : grouped.values()) {
+            for (Long memberId : aggregate.memberIds) {
+                Member member = memberMap.get(memberId);
+                if (member == null) {
+                    continue;
+                }
+                String name = member.getNickName() != null ? member.getNickName() : member.getName();
+                if (name != null) {
+                    aggregate.memberNames.add(name);
+                }
             }
         }
 
-        return map.values().stream()
+        return grouped.values().stream()
                 .sorted(Comparator.comparing(SlotAggregate::date).thenComparing(SlotAggregate::startTime))
                 .toList();
     }
 
-    private List<SlotAggregate> applyFilter(List<SlotAggregate> source, AppointmentCandidateFilter filter) {
+    private List<SlotAggregate> applyCandidateFilter(List<SlotAggregate> source, AppointmentCandidateFilter filter) {
         List<Long> userIds = filter == null ? null : filter.getUserIds();
-        Long availableUserCount = filter == null ? null : filter.getAvailableUserCount();
-        Long availableTimeSlotCount = filter == null ? null : filter.getAvailableTimeSlotCount();
+        Long minUsers = filter == null ? null : filter.getAvailableUserCount();
+        Long minSlots = filter == null ? null : filter.getAvailableTimeSlotCount();
 
         return source.stream()
                 .filter(slot -> userIds == null || userIds.isEmpty() || slot.memberIds.containsAll(userIds))
-                .filter(slot -> availableUserCount == null || slot.memberIds.size() >= availableUserCount)
-                .filter(slot -> availableTimeSlotCount == null || availableTimeSlotCount <= 1
-                        || durationSlotCount(slot.startTime(), slot.endTime()) >= availableTimeSlotCount)
+                .filter(slot -> minUsers == null || slot.memberIds.size() >= minUsers)
+                .filter(slot -> minSlots == null || minSlots <= 1 || durationSlotCount(slot.startTime(), slot.endTime()) >= minSlots)
                 .toList();
     }
 
-    private long durationSlotCount(LocalTime startTime, LocalTime endTime) {
-        long minutes = Duration.between(startTime, endTime).toMinutes();
+    private long durationSlotCount(LocalTime start, LocalTime end) {
+        long minutes = Duration.between(start, end).toMinutes();
         if (minutes <= 0) {
             return 0;
         }
         return Math.max(1, minutes / 30);
     }
 
-    private List<AppointmentListResponseDto.AvailableDateTime> toAvailableSlots(List<SlotAggregate> aggregates) {
-        return aggregates.stream().map(slot -> {
-            AppointmentListResponseDto.AvailableDateTime dto = new AppointmentListResponseDto.AvailableDateTime();
-            dto.setDate(slot.date());
-            dto.setStartTime(slot.startTime());
-            dto.setEndTime(slot.endTime());
-            dto.setAvailableUserCount((long) slot.memberIds.size());
-            dto.setAvailableUserNames(new ArrayList<>(slot.memberNames));
-            return dto;
-        }).toList();
+    private AppointmentListResponseDto.AvailableDateTime toAvailableDateTime(SlotAggregate aggregate) {
+        AppointmentListResponseDto.AvailableDateTime dto = new AppointmentListResponseDto.AvailableDateTime();
+        dto.setDate(aggregate.date());
+        dto.setStartTime(aggregate.startTime());
+        dto.setEndTime(aggregate.endTime());
+        dto.setAvailableUserCount((long) aggregate.memberIds.size());
+        dto.setAvailableUserNames(new ArrayList<>(aggregate.memberNames));
+        return dto;
     }
 
-    private List<AppointmentTimeTableResponseDto.AvailableDateTimeSlot> toTimeTableSlots(List<SlotAggregate> aggregates) {
-        List<AppointmentTimeTableResponseDto.AvailableDateTimeSlot> response = new ArrayList<>();
-        for (SlotAggregate slot : aggregates) {
-            AppointmentTimeTableResponseDto.AvailableDateTimeSlot dto = new AppointmentTimeTableResponseDto.AvailableDateTimeSlot();
-            dto.setDate(slot.date());
-            dto.setTime(slot.startTime());
-            response.add(dto);
-        }
-        return response;
+    private AppointmentTimeTableResponseDto.AvailableDateTimeSlot toTimeTableSlot(SlotAggregate aggregate) {
+        AppointmentTimeTableResponseDto.AvailableDateTimeSlot dto = new AppointmentTimeTableResponseDto.AvailableDateTimeSlot();
+        dto.setDate(aggregate.date());
+        dto.setTime(aggregate.startTime());
+        return dto;
     }
 
     private List<TimeRange> compressToRanges(List<LocalTime> sortedTimes) {
         if (sortedTimes.isEmpty()) {
             return List.of();
         }
-
         List<TimeRange> ranges = new ArrayList<>();
-        LocalTime rangeStart = sortedTimes.get(0);
+        LocalTime start = sortedTimes.get(0);
         LocalTime prev = sortedTimes.get(0);
-
         for (int i = 1; i < sortedTimes.size(); i++) {
             LocalTime cur = sortedTimes.get(i);
             if (!cur.equals(prev.plusMinutes(30))) {
-                ranges.add(new TimeRange(rangeStart, prev.plusMinutes(30)));
-                rangeStart = cur;
+                ranges.add(new TimeRange(start, prev.plusMinutes(30)));
+                start = cur;
             }
             prev = cur;
         }
-        ranges.add(new TimeRange(rangeStart, prev.plusMinutes(30)));
+        ranges.add(new TimeRange(start, prev.plusMinutes(30)));
         return ranges;
     }
 
-    private record SlotKey(LocalDate date, LocalTime start, LocalTime end) {
-    }
+    private record SlotKey(LocalDate date, LocalTime startTime, LocalTime endTime) {}
 
     private static class SlotAggregate {
         private final LocalDate date;
         private final LocalTime startTime;
         private final LocalTime endTime;
-        private final Set<Long> memberIds = new java.util.HashSet<>();
-        private final Set<String> memberNames = new java.util.LinkedHashSet<>();
+        private final Set<Long> memberIds = new LinkedHashSet<>();
+        private final Set<String> memberNames = new LinkedHashSet<>();
 
         private SlotAggregate(LocalDate date, LocalTime startTime, LocalTime endTime) {
             this.date = date;
@@ -415,19 +438,10 @@ public class AppointmentService {
             this.endTime = endTime;
         }
 
-        public LocalDate date() {
-            return date;
-        }
-
-        public LocalTime startTime() {
-            return startTime;
-        }
-
-        public LocalTime endTime() {
-            return endTime;
-        }
+        public LocalDate date() { return date; }
+        public LocalTime startTime() { return startTime; }
+        public LocalTime endTime() { return endTime; }
     }
 
-    private record TimeRange(LocalTime start, LocalTime end) {
-    }
+    private record TimeRange(LocalTime start, LocalTime end) {}
 }

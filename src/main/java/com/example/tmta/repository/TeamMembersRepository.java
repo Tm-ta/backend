@@ -1,15 +1,16 @@
 package com.example.tmta.repository;
 
-import com.example.tmta.entity.Member;
-import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 public interface TeamMembersRepository extends JpaRepository<TeamMembers, Long> {
-    Optional<TeamMembers> findByTeamAndMember(Team team, Member member);
-    java.util.List<TeamMembers> findAllByTeam(Team team);
-    java.util.List<TeamMembers> findAllByMember(Member member);
+    Optional<TeamMembers> findByTeamIdAndMemberId(UUID teamId, Long memberId);
+    boolean existsByTeamIdAndMemberId(UUID teamId, Long memberId);
+    List<TeamMembers> findAllByTeamId(UUID teamId);
+    List<TeamMembers> findAllByTeamIdIn(List<UUID> teamIds);
+    List<TeamMembers> findAllByMemberId(Long memberId);
 }
-

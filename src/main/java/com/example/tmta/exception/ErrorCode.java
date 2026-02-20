@@ -24,6 +24,9 @@ public enum ErrorCode {
 
     // Appointment
     APPOINTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "해당 약속을 찾을 수 없습니다."),
+    INVALID_APPOINTMENT_STATE(HttpStatus.BAD_REQUEST, "A002", "현재 약속 상태에서는 요청을 처리할 수 없습니다."),
+    APPOINTMENT_DATE_MISMATCH(HttpStatus.BAD_REQUEST, "A003", "약속에 포함되지 않은 날짜가 포함되어 있습니다."),
+    APPOINTMENT_TIME_OUT_OF_RANGE(HttpStatus.BAD_REQUEST, "A004", "약속 시간 범위를 벗어난 시간이 포함되어 있습니다."),
 
     // Team
     TEAM_NOT_FOUND(HttpStatus.NOT_FOUND, "T001", "해당 팀을 찾을 수 없습니다."),

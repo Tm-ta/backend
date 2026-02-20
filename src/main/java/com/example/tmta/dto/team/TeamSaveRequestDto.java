@@ -30,8 +30,12 @@ public class TeamSaveRequestDto {
     }
 
     public Team toEntity() {
+        return toEntity(this.teamName);
+    }
+
+    public Team toEntity(String normalizedTeamName) {
         return Team.builder()
-                .name(teamName)
+                .name(normalizedTeamName)
                 .namePolicy(useRealName ? NamePolicy.USE_REALNAME : NamePolicy.USE_NICKNAME)
                 .postPermission(onlyLeaderCanPost ? PostPermission.LEADER_ONLY : PostPermission.ALL_MEMBERS)
                 .build();

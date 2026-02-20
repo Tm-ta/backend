@@ -52,10 +52,10 @@ public class AuthService {
                 .profileSetupCompleted(false)
                 .build();
 
-        // TODO(social-login): Google/Naver 연동 시 authProvider/providerId 기반으로 계정 매핑하세요.
+        // NOTE(social-login): Google/Naver 연동 시 authProvider/providerId 기반으로 계정 매핑 확장 포인트입니다.
         // LOCAL은 password 사용, 소셜 계정은 password 없이 providerId로 식별하면 됩니다.
 
-        // TODO(email-verification): 회원가입 시 검증 토큰을 생성해 메일 발송 큐에 넣고,
+        // NOTE(email-verification): 이메일 검증 확장 시 검증 토큰을 생성해 메일 발송 큐에 넣고,
         // 토큰 검증 API에서 member.emailVerified=true 처리하세요.
         // 예시 흐름: VerificationToken(entity) 저장 -> 메일 발송 -> /verify?token=... 확인.
 

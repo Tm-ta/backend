@@ -89,8 +89,8 @@ public class DataLoader implements CommandLineRunner {
 
             // testMember is ADMIN of Team Alpha
             TeamMembers tmAlphaAdmin = TeamMembers.builder()
-                    .team(teamAlpha)
-                    .member(testMember)
+                    .teamId(teamAlpha.getId())
+                    .memberId(testMember.getId())
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.ADMIN)
                     .teamNickName(testMember.getNickName())
@@ -98,12 +98,11 @@ public class DataLoader implements CommandLineRunner {
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmAlphaAdmin);
-            teamAlpha.addTeamMember(tmAlphaAdmin);
 
             // member1 is GENERAL of Team Alpha
             TeamMembers tmAlphaMember1 = TeamMembers.builder()
-                    .team(teamAlpha)
-                    .member(member1)
+                    .teamId(teamAlpha.getId())
+                    .memberId(member1.getId())
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(member1.getNickName())
@@ -111,12 +110,11 @@ public class DataLoader implements CommandLineRunner {
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmAlphaMember1);
-            teamAlpha.addTeamMember(tmAlphaMember1);
 
             // Appointments for Team Alpha
             Appointment app1 = Appointment.builder()
-                    .team(teamAlpha)
-                    .createdBy(testMember)
+                    .teamId(teamAlpha.getId())
+                    .createdByMemberId(testMember.getId())
                     .name("Alpha Project Kickoff")
                     .description("Initial meeting for the Alpha project")
                     .address("Online")
@@ -127,8 +125,8 @@ public class DataLoader implements CommandLineRunner {
             appointmentRepository.save(app1);
 
             Appointment app2 = Appointment.builder()
-                    .team(teamAlpha)
-                    .createdBy(member1)
+                    .teamId(teamAlpha.getId())
+                    .createdByMemberId(member1.getId())
                     .name("Alpha Weekly Sync")
                     .description("Regular weekly meeting")
                     .address("Conference Room A")
@@ -149,8 +147,8 @@ public class DataLoader implements CommandLineRunner {
 
             // member1 is ADMIN of Team Beta
             TeamMembers tmBetaAdmin = TeamMembers.builder()
-                    .team(teamBeta)
-                    .member(member1)
+                    .teamId(teamBeta.getId())
+                    .memberId(member1.getId())
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.ADMIN)
                     .teamNickName(member1.getNickName())
@@ -158,12 +156,11 @@ public class DataLoader implements CommandLineRunner {
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaAdmin);
-            teamBeta.addTeamMember(tmBetaAdmin);
 
             // testMember is GENERAL of Team Beta
             TeamMembers tmBetaTestMember = TeamMembers.builder()
-                    .team(teamBeta)
-                    .member(testMember)
+                    .teamId(teamBeta.getId())
+                    .memberId(testMember.getId())
                     .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(testMember.getNickName())
@@ -171,12 +168,11 @@ public class DataLoader implements CommandLineRunner {
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaTestMember);
-            teamBeta.addTeamMember(tmBetaTestMember);
 
             // member2 is GENERAL of Team Beta
             TeamMembers tmBetaMember2 = TeamMembers.builder()
-                    .team(teamBeta)
-                    .member(member2)
+                    .teamId(teamBeta.getId())
+                    .memberId(member2.getId())
                     .inviteState(InviteState.PENDING) // Pending invite
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(member2.getNickName())
@@ -184,12 +180,11 @@ public class DataLoader implements CommandLineRunner {
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaMember2);
-            teamBeta.addTeamMember(tmBetaMember2);
 
             // Appointments for Team Beta
             Appointment app3 = Appointment.builder()
-                    .team(teamBeta)
-                    .createdBy(member1)
+                    .teamId(teamBeta.getId())
+                    .createdByMemberId(member1.getId())
                     .name("Beta Feature Discussion")
                     .description("Discuss new features for Beta project")
                     .address("Zoom Call")

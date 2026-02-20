@@ -9,9 +9,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static jakarta.persistence.EnumType.STRING;
 
 @Entity
@@ -36,21 +33,12 @@ public class Member extends BaseEntity{
     private String profileImage;
     private boolean profileSetupCompleted;
     private boolean emailVerified;
-    // TODO(email-verification): 아래 필드는 이메일 인증 기능 활성화 시 사용하세요.
+    // NOTE(email-verification): 아래 필드는 이메일 인증 기능 활성화 시 사용할 확장 포인트입니다.
     // private String emailVerificationToken;
     // private LocalDateTime emailVerificationExpiresAt;
     private boolean pushAlarmAgree;
     @Enumerated(value = STRING)
     private MemberRole role;
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default // Added Builder.Default
-    private List<TeamMembers> teamMembersList = new ArrayList<>();
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default // Added Builder.Default
-    private List<AvailableTime> availableTimeList = new ArrayList<>();
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default // Added Builder.Default
-    private List<Vote> voteList = new ArrayList<>();
 
     public void updateProfile(String nickName, String profileImage) {
         this.nickName = nickName;

@@ -1,17 +1,15 @@
 package com.example.tmta.dto.team;
 
-import com.example.tmta.entity.Appointment;
-import com.example.tmta.entity.Team;
+import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.entity.type.AppointmentState;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.Getter;
+import lombok.Data;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-@Getter
+@Data
 @Schema(description = "팀 상세 정보 응답 DTO")
 public class DetailTeamList {
     @Schema(description = "팀 ID")
@@ -24,18 +22,10 @@ public class DetailTeamList {
     private String profileImage;
     @Schema(description = "약속 목록")
     private List<AppointmentDetail> appointments;
+    @Schema(description = "팀 멤버 목록")
+    private List<MemberInfo> members;
 
-    public DetailTeamList(Team team) {
-        this.groupId = team.getId();
-        this.groupName = team.getName();
-        this.memberCount = (long) team.getTeamMembersList().size();
-        this.profileImage = team.getProfileImage();
-        this.appointments = team.getAppointmentList().stream()
-                .map(AppointmentDetail::new)
-                .collect(Collectors.toList());
-    }
-
-    @Getter
+    @Data
     @Schema(description = "약속 상세 정보")
     public static class AppointmentDetail {
         @Schema(description = "약속 ID")
@@ -48,18 +38,7 @@ public class DetailTeamList {
         private Long memberCount;
         @Schema(description = "약속 상태")
         private AppointmentState state;
-
-        public AppointmentDetail(Appointment appointment) {
-            this.appointmentId = appointment.getId();
-            if (!appointment.getAppointmentDateList().isEmpty()) {
-                this.startDate = appointment.getAppointmentDateList().get(0).getDate();
-                this.endDate = appointment.getAppointmentDateList().get(appointment.getAppointmentDateList().size() - 1).getDate();
-            } else {
-                this.startDate = null;
-                this.endDate = null;
-            }
-            this.memberCount = (long) appointment.getTeam().getTeamMembersList().size();
-            this.state = appointment.getState();
-        }
+        @Schema(description = "날짜만 선택 가능한 약속인지 여부")
+        private boolean isOnlyDate;
     }
 }
