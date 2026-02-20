@@ -1,5 +1,6 @@
 package com.example.tmta.dto.team;
 
+import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.entity.type.AppointmentState;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -17,8 +18,8 @@ public record TeamListResponseDto(
             @Schema(description = "팀 이름") String groupName,
             @Schema(description = "약속 상태") AppointmentState state,
             @Schema(description = "팀원 수") Long memberCount,
-            @Schema(description = "팀원 프로필 이미지 목록") List<String> memberProfiles,
-            @Schema(description = "팀에서 사용하는 팀원 이름 목록") List<String> memberNames,
+            @Schema(description = "팀원 정보 목록")
+            List<MemberInfo> members,
             @Schema(description = "내 팀 프로필 설정 완료 여부") boolean myTeamProfileSetupCompleted
     ) {
     }

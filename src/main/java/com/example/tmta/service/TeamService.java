@@ -76,28 +76,15 @@ public class TeamService {
             List<TeamMembers> teamMembers = membersByTeam.getOrDefault(team.getId(), List.of());
             List<Appointment> teamAppointments = appointmentsByTeam.getOrDefault(team.getId(), List.of());
 
-            List<String> profiles = new ArrayList<>();
-            List<String> names = new ArrayList<>();
-            for (TeamMembers membership : teamMembers) {
-                Member member = memberMap.get(membership.getMemberId());
-                if (member == null) {
-                    continue;
-                }
-                profiles.add(membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage());
-
-                String displayName = membership.getTeamNickName() != null ? membership.getTeamNickName() : member.getNickName();
-                if (displayName == null) {
-                    displayName = member.getName();
-                }
-                names.add(displayName);
-            }
+            List<MemberInfo> members = teamMembers.stream()
+                    .map(membership -> toMemberInfo(membership, memberMap.get(membership.getMemberId())))
+                    .toList();
             teamInfoList.add(new TeamListResponseDto.TeamInfo(
                     team.getId(),
                     team.getName(),
                     teamAppointments.isEmpty() ? AppointmentState.CREATING : teamAppointments.get(0).getState(),
                     (long) teamMembers.size(),
-                    profiles,
-                    names,
+                    members,
                     myMembership.isTeamProfileSetupCompleted()
             ));
         }
