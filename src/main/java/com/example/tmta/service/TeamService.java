@@ -41,6 +41,7 @@ public class TeamService {
     private final CurrentMemberProvider currentMemberProvider;
     private final TeamQueryAssembler teamQueryAssembler;
 
+    /** 현재 사용자가 속한 팀 목록을 조회합니다. */
     @Transactional(readOnly = true)
     public TeamListResponseDto getTeamList() {
         Member current = getCurrentMemberWithProfile();
@@ -68,6 +69,7 @@ public class TeamService {
         return teamQueryAssembler.toTeamListResponse(myMemberships, teamMap, membersByTeam, appointmentsByTeam, memberMap);
     }
 
+    /** 새 팀을 생성하고 생성자를 팀장으로 등록합니다. */
     @Transactional
     public TeamSaveResponseDto createTeam(TeamSaveRequestDto requestDto) {
         Member current = getCurrentMemberWithProfile();
@@ -88,6 +90,7 @@ public class TeamService {
         return new TeamSaveResponseDto(team);
     }
 
+    /** 팀 상세 정보(멤버/약속 포함)를 조회합니다. */
     @Transactional(readOnly = true)
     public DetailTeamList getDetailTeam(UUID teamId) {
         Member current = getCurrentMemberWithProfile();
@@ -103,6 +106,7 @@ public class TeamService {
         return teamQueryAssembler.toDetailTeamList(team, memberships, appointments, memberMap);
     }
 
+    /** 현재 사용자를 팀에 가입시킵니다. */
     @Transactional
     public void joinTeam(UUID teamId) {
         Member current = getCurrentMemberWithProfile();
@@ -116,6 +120,7 @@ public class TeamService {
         teamMembersRepository.save(membership);
     }
 
+    /** 현재 사용자의 팀 전용 프로필을 설정/수정합니다. */
     @Transactional
     public void setupMyTeamProfile(UUID teamId, TeamProfileSetupRequestDto request) {
         Member current = getCurrentMemberWithProfile();
@@ -125,6 +130,7 @@ public class TeamService {
         membership.updateTeamProfile(request.teamNickName(), request.teamProfileImage());
     }
 
+    /** 현재 사용자를 팀에서 탈퇴 처리합니다. */
     @Transactional
     public void exitTeam(UUID teamId) {
         Member current = getCurrentMemberWithProfile();
@@ -138,6 +144,7 @@ public class TeamService {
         teamMembersRepository.delete(membership);
     }
 
+    /** 팀장 권한으로 팀장 위임을 수행합니다. */
     @Transactional
     public void delegateLeader(UUID teamId, Long memberId) {
         Member currentLeader = getCurrentMemberWithProfile();
@@ -152,6 +159,7 @@ public class TeamService {
         newLeaderMembership.updateTeamRole(TeamRole.ADMIN);
     }
 
+    /** 팀장 권한으로 팀원을 강제 추방합니다. */
     @Transactional
     public void kickMember(UUID teamId, Long memberId) {
         Member currentLeader = getCurrentMemberWithProfile();
@@ -168,6 +176,7 @@ public class TeamService {
         teamMembersRepository.delete(targetMembership);
     }
 
+    /** 현재 로그인 사용자의 프로필 설정 완료 여부를 확인하고 반환합니다. */
     private Member getCurrentMemberWithProfile() {
         Member current = currentMemberProvider.getCurrentMember();
         if (!current.isProfileSetupCompleted()) {
@@ -176,22 +185,26 @@ public class TeamService {
         return current;
     }
 
+    /** 팀 엔티티를 조회합니다. */
     private Team getTeam(UUID teamId) {
         return teamRepository.findById(teamId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.TEAM_NOT_FOUND));
     }
 
+    /** 팀 멤버십을 검증하고 반환합니다. */
     private TeamMembers requireMembership(UUID teamId, Long memberId) {
         return teamMembersRepository.findByTeamIdAndMemberId(teamId, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM));
     }
 
+    /** 팀장 권한 여부를 검증합니다. */
     private void requireLeader(TeamMembers membership) {
         if (membership.getTeamRole() != TeamRole.ADMIN) {
             throw new BusinessException(ErrorCode.NOT_A_LEADER_OF_TEAM);
         }
     }
 
+    /** 팀 이름을 공백 정리 후 검증합니다. */
     private String normalizeTeamName(String teamName) {
         if (teamName == null || teamName.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);

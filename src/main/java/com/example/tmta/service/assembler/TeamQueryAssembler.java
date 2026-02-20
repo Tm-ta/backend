@@ -21,6 +21,7 @@ import java.util.UUID;
 @Component
 public class TeamQueryAssembler {
 
+    /** 팀 목록 응답 DTO를 조립합니다. */
     public TeamListResponseDto toTeamListResponse(List<TeamMembers> myMemberships,
                                                   Map<UUID, Team> teamMap,
                                                   Map<UUID, List<TeamMembers>> membersByTeam,
@@ -49,6 +50,7 @@ public class TeamQueryAssembler {
         return new TeamListResponseDto(teamInfoList);
     }
 
+    /** 팀 상세 응답 DTO를 조립합니다. */
     public DetailTeamList toDetailTeamList(Team team,
                                            List<TeamMembers> memberships,
                                            List<Appointment> appointments,
@@ -70,6 +72,7 @@ public class TeamQueryAssembler {
         );
     }
 
+    /** 멤버 정보를 응답용 DTO로 변환합니다. */
     private MemberInfo toMemberInfo(TeamMembers membership, Member member) {
         if (member == null) {
             return MemberInfo.of(membership.getMemberId(), null, null);
@@ -82,6 +85,7 @@ public class TeamQueryAssembler {
         return MemberInfo.of(member.getId(), displayName, profileImage);
     }
 
+    /** 약속 엔티티를 팀 상세 내 약속 DTO로 변환합니다. */
     private DetailTeamList.AppointmentDetail toAppointmentDetail(Appointment appointment, int memberCount) {
         List<LocalDate> dates = appointment.getAppointmentDateList().stream()
                 .map(AppointmentDate::getDate)

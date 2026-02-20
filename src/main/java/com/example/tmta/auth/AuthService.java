@@ -36,6 +36,7 @@ public class AuthService {
     private final JwtProperties jwtProperties;
     private final EmailVerificationService emailVerificationService;
 
+    /** 이메일 인증 토큰이 검증된 사용자만 로컬 회원가입을 처리합니다. */
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
         emailVerificationService.assertEmailVerifiedForSignUp(request.email(), request.verificationToken());
@@ -46,18 +47,15 @@ public class AuthService {
 
         Member member = Member.registerLocal(request.email(), passwordEncoder.encode(request.password()));
 
-        // NOTE(social-login): Google/Naver 연동 시 authProvider/providerId 기반으로 계정 매핑 확장 포인트입니다.
-        // LOCAL은 password 사용, 소셜 계정은 password 없이 providerId로 식별하면 됩니다.
-
-        // NOTE(email-verification): 이메일 검증 확장 시 검증 토큰을 생성해 메일 발송 큐에 넣고,
-        // 토큰 검증 API에서 member.emailVerified=true 처리하세요.
-        // 예시 흐름: VerificationToken(entity) 저장 -> 메일 발송 -> /verify?token=... 확인.
+        // TODO(feature-social-login): Google/Naver OAuth 로그인 연동 및 providerId 계정 매핑을 구현합니다.
+        // TODO(feature-email-verification): 이메일 인증 이력/정책(재시도 제한, 감사로그) 저장소를 외부 DB로 확장합니다.
 
         memberRepository.save(member);
 
         return new SignUpResponse(member.getId(), member.getEmail());
     }
 
+    /** 로컬 계정 인증 후 Access/Refresh 토큰을 발급합니다. */
     @Transactional
     public LoginResult login(LoginRequest request) {
         try {
@@ -83,6 +81,7 @@ public class AuthService {
         }
     }
 
+    /** Refresh 토큰을 검증하고 Access/Refresh 토큰을 재발급합니다. */
     @Transactional
     public LoginResult refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
@@ -122,6 +121,7 @@ public class AuthService {
         return new LoginResult(response, newRefreshToken, jwtProperties.refreshTokenValiditySeconds());
     }
 
+    /** 현재 로그인 사용자의 Refresh 토큰을 폐기합니다. */
     @Transactional
     public void logout(Long memberId) {
         Member member = memberRepository.findById(memberId)
@@ -132,6 +132,7 @@ public class AuthService {
     public record LoginResult(AuthResponse response, String refreshToken, long refreshTokenValiditySeconds) {
     }
 
+    /** 이메일/비밀번호 기반 인증을 수행하고 인증 주체를 반환합니다. */
     private UserPrincipal authenticate(String email, String password) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)

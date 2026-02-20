@@ -17,6 +17,7 @@ public class TermsService {
 
     private final Map<String, TermsDocument> termsByCode;
 
+    /** 기본 약관 문서를 메모리에 등록합니다. */
     public TermsService() {
         this.termsByCode = new LinkedHashMap<>();
         register(new TermsDocument(
@@ -64,8 +65,10 @@ public class TermsService {
                         본 동의는 선택 사항이며, 언제든지 철회할 수 있습니다.
                         """
         ));
+        // TODO(feature-terms-storage): 약관 버전/본문을 DB 또는 외부 CMS에서 조회하도록 전환합니다.
     }
 
+    /** 약관 요약 목록을 반환합니다. */
     public TermsListResponseDto getTermsList() {
         List<TermsListResponseDto.TermsSummary> items = termsByCode.values().stream()
                 .map(doc -> new TermsListResponseDto.TermsSummary(
@@ -79,6 +82,7 @@ public class TermsService {
         return new TermsListResponseDto(items);
     }
 
+    /** 약관 코드를 기준으로 약관 상세를 반환합니다. */
     public TermsDetailResponseDto getTermsDetail(String code) {
         if (code == null || code.isBlank()) {
             throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
@@ -97,6 +101,7 @@ public class TermsService {
         );
     }
 
+    /** 메모리 저장소에 약관 문서를 등록합니다. */
     private void register(TermsDocument document) {
         termsByCode.put(document.code(), document);
     }

@@ -19,6 +19,7 @@ import java.util.Set;
 @Component
 public class AppointmentSlotCalculator {
 
+    /** 등록된 가능 시간 목록을 날짜/시간 슬롯 기준으로 집계합니다. */
     public List<SlotAggregate> aggregateSlots(List<AvailableTime> times, Map<Long, Member> memberMap) {
         Map<SlotKey, SlotAggregate> grouped = new HashMap<>();
         for (AvailableTime time : times) {
@@ -45,6 +46,7 @@ public class AppointmentSlotCalculator {
                 .toList();
     }
 
+    /** 사용자/인원/시간슬롯 조건으로 후보 슬롯을 필터링합니다. */
     public List<SlotAggregate> applyFilter(List<SlotAggregate> source, AppointmentCandidateFilter filter) {
         List<Long> userIds = filter == null ? null : filter.userIds();
         Long minUsers = filter == null ? null : filter.availableUserCount();
@@ -57,6 +59,7 @@ public class AppointmentSlotCalculator {
                 .toList();
     }
 
+    /** 30분 단위 시간 목록을 연속 구간으로 압축합니다. */
     public List<TimeRange> compressToRanges(List<LocalTime> sortedTimes) {
         if (sortedTimes.isEmpty()) {
             return List.of();
@@ -76,6 +79,7 @@ public class AppointmentSlotCalculator {
         return ranges;
     }
 
+    /** 시간 구간 길이를 30분 슬롯 개수로 계산합니다. */
     private long durationSlotCount(LocalTime start, LocalTime end) {
         long minutes = Duration.between(start, end).toMinutes();
         if (minutes <= 0) {
@@ -84,9 +88,11 @@ public class AppointmentSlotCalculator {
         return Math.max(1, minutes / 30);
     }
 
+    /** 슬롯 그룹핑 키입니다. */
     private record SlotKey(LocalDate date, LocalTime startTime, LocalTime endTime) {
     }
 
+    /** 후보 시간 슬롯 집계 결과입니다. */
     public static class SlotAggregate {
         private final LocalDate date;
         private final LocalTime startTime;
@@ -121,6 +127,7 @@ public class AppointmentSlotCalculator {
         }
     }
 
+    /** 연속 시간 구간(start/end) 표현입니다. */
     public record TimeRange(LocalTime start, LocalTime end) {
     }
 }

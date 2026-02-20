@@ -13,6 +13,7 @@ public class MemberService {
 
     private final CurrentMemberProvider currentMemberProvider;
 
+    /** 현재 로그인 사용자의 프로필(닉네임/이미지)을 설정합니다. */
     @Transactional
     public void setupProfile(ProfileSetupRequest request) {
         Member member = currentMemberProvider.getCurrentMember();

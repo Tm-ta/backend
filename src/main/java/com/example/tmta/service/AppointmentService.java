@@ -55,6 +55,7 @@ public class AppointmentService {
     private final AppointmentCommandPolicy appointmentCommandPolicy;
     private final AppointmentQueryAssembler appointmentQueryAssembler;
 
+    /** 팀 약속을 생성합니다. */
     @Transactional
     public UUID createTeamAppointment(UUID teamId, AppointmentSaveRequestDto request) {
         Member current = getCurrentMemberWithProfile();
@@ -80,6 +81,7 @@ public class AppointmentService {
         return appointmentRepository.save(appointment).getId();
     }
 
+    /** 팀 약속 상세 정보를 조회합니다. */
     @Transactional(readOnly = true)
     public AppointmentDetailResponseDto getTeamAppointmentDetail(UUID teamId, UUID appointmentId) {
         Member current = getCurrentMemberWithProfile();
@@ -95,6 +97,7 @@ public class AppointmentService {
         return appointmentQueryAssembler.toAppointmentDetailResponse(appointment, memberships, memberMap);
     }
 
+    /** 팀 약속 후보 시간 목록을 조회합니다. */
     @Transactional(readOnly = true)
     public AppointmentListResponseDto getTeamAppointmentCandidate(UUID teamId, UUID appointmentId, AppointmentCandidateFilter filter) {
         Member current = getCurrentMemberWithProfile();
@@ -106,6 +109,7 @@ public class AppointmentService {
         return appointmentQueryAssembler.toCandidateResponse(appointmentId, filtered);
     }
 
+    /** 팀 약속 타임테이블을 조회합니다. */
     @Transactional(readOnly = true)
     public AppointmentTimeTableResponseDto getTeamAppointmentTimeTable(UUID teamId, UUID appointmentId, AppointmentCandidateFilter filter) {
         Member current = getCurrentMemberWithProfile();
@@ -117,6 +121,7 @@ public class AppointmentService {
         return appointmentQueryAssembler.toTimeTableResponse(appointmentId, filtered);
     }
 
+    /** 팀장 또는 생성자 권한으로 약속 마감을 처리합니다. */
     @Transactional
     public void deadlineTeamAppointment(UUID teamId, UUID appointmentId) {
         Member current = getCurrentMemberWithProfile();
@@ -131,6 +136,7 @@ public class AppointmentService {
         appointment.closeScheduling();
     }
 
+    /** 현재 사용자의 약속 가능 시간을 등록합니다. */
     @Transactional
     public void registerTeamAppointmentTime(UUID teamId, UUID appointmentId, AppointmentTimeRegisterRequestDto request) {
         Member current = getCurrentMemberWithProfile();
@@ -176,6 +182,7 @@ public class AppointmentService {
         }
     }
 
+    /** 팀장 또는 생성자 권한으로 약속 시간을 최종 확정합니다. */
     @Transactional
     public void confirmTeamAppointment(UUID teamId, UUID appointmentId, AppointmentConfirmRequestDto request) {
         Member current = getCurrentMemberWithProfile();
@@ -216,6 +223,7 @@ public class AppointmentService {
         appointment.updateState(AppointmentState.CONFIRMED);
     }
 
+    /** 팀장 또는 생성자 권한으로 약속을 삭제합니다. */
     @Transactional
     public void deleteTeamAppointment(UUID teamId, UUID appointmentId) {
         Member current = getCurrentMemberWithProfile();
@@ -226,6 +234,7 @@ public class AppointmentService {
         appointmentRepository.delete(appointment);
     }
 
+    /** 팀장 또는 생성자 권한으로 약속 정보를 수정합니다. */
     @Transactional
     public void updateTeamAppointment(UUID teamId, UUID appointmentId, AppointmentUpdateRequestDto request) {
         Member current = getCurrentMemberWithProfile();
@@ -250,6 +259,7 @@ public class AppointmentService {
         );
     }
 
+    /** 현재 로그인 사용자의 프로필 설정 완료 여부를 확인하고 반환합니다. */
     private Member getCurrentMemberWithProfile() {
         Member current = currentMemberProvider.getCurrentMember();
         if (!current.isProfileSetupCompleted()) {
@@ -258,27 +268,32 @@ public class AppointmentService {
         return current;
     }
 
+    /** 팀 존재 여부를 검증합니다. */
     private void ensureTeamExists(UUID teamId) {
         if (!teamRepository.existsById(teamId)) {
             throw new BusinessException(ErrorCode.TEAM_NOT_FOUND);
         }
     }
 
+    /** 팀 멤버십을 검증하고 멤버십 정보를 반환합니다. */
     private TeamMembers requireMembership(UUID teamId, Long memberId) {
         return teamMembersRepository.findByTeamIdAndMemberId(teamId, memberId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_A_MEMBER_OF_TEAM));
     }
 
+    /** 팀/약속 식별자로 약속 엔티티를 조회합니다. */
     private Appointment getAppointment(UUID teamId, UUID appointmentId) {
         return appointmentRepository.findByIdAndTeamId(appointmentId, teamId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.APPOINTMENT_NOT_FOUND));
     }
 
+    /** 약속 상세 연관정보 포함 조회를 수행합니다. */
     private Appointment getAppointmentDetail(UUID teamId, UUID appointmentId) {
         return appointmentRepository.findDetailByIdAndTeamId(appointmentId, teamId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.APPOINTMENT_NOT_FOUND));
     }
 
+    /** 약속 관리 권한(팀장 또는 약속 생성자)을 검증합니다. */
     private void requireCanManageAppointment(TeamMembers membership, Appointment appointment, Long currentMemberId) {
         boolean isAdmin = membership.getTeamRole() == TeamRole.ADMIN;
         boolean isCreator = appointment.isCreatedBy(currentMemberId);
@@ -287,10 +302,12 @@ public class AppointmentService {
         }
     }
 
+    /** 약속 범위를 벗어난 시간인지 검사합니다. */
     private boolean isOutOfRange(LocalTime time, LocalTime startTime, LocalTime endTime) {
         return time.isBefore(startTime) || !time.isBefore(endTime);
     }
 
+    /** 약속의 가능 시간 데이터를 슬롯 집계 구조로 변환합니다. */
     private List<AppointmentSlotCalculator.SlotAggregate> aggregateAvailableSlots(Appointment appointment) {
         List<AvailableTime> times = availableTimeRepository.findAllByAppointmentDateAppointment(appointment);
         List<Long> memberIds = times.stream().map(AvailableTime::getMemberId).distinct().toList();
