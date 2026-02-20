@@ -12,8 +12,8 @@ public record SignUpRequest(
         @Schema(description = "비밀번호", example = "P@ssw0rd!")
         @NotBlank
         @Pattern(
-                regexp = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[!@#$%^&*()_+\\-=[\\]{};':\\\"\\\\|,.<>/?]).{8,}$",
-                message = "비밀번호는 8자 이상, 영문/숫자/특수문자를 포함해야 합니다."
+                regexp = "^(?=\\S{8,64}$)(?=.*[A-Za-z])(?=.*\\d)(?=.*[^A-Za-z\\d]).*$",
+                message = "비밀번호는 공백 없이 8~64자이며, 영문/숫자/특수문자를 각각 1개 이상 포함해야 합니다."
         )
         String password
 ) {
