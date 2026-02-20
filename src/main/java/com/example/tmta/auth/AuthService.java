@@ -6,8 +6,6 @@ import com.example.tmta.auth.dto.SignUpRequest;
 import com.example.tmta.auth.dto.SignUpResponse;
 import com.example.tmta.entity.Member;
 import com.example.tmta.entity.RefreshToken;
-import com.example.tmta.entity.type.AuthProvider;
-import com.example.tmta.entity.type.MemberRole;
 import com.example.tmta.exception.BusinessException;
 import com.example.tmta.exception.ErrorCode;
 import com.example.tmta.repository.MemberRepository;
@@ -43,14 +41,7 @@ public class AuthService {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATION);
         }
 
-        Member member = Member.builder()
-                .email(request.email())
-                .password(passwordEncoder.encode(request.password()))
-                .authProvider(AuthProvider.LOCAL)
-                .role(MemberRole.GENERAL)
-                .emailVerified(false)
-                .profileSetupCompleted(false)
-                .build();
+        Member member = Member.registerLocal(request.email(), passwordEncoder.encode(request.password()));
 
         // NOTE(social-login): Google/Naver 연동 시 authProvider/providerId 기반으로 계정 매핑 확장 포인트입니다.
         // LOCAL은 password 사용, 소셜 계정은 password 없이 providerId로 식별하면 됩니다.
@@ -67,11 +58,7 @@ public class AuthService {
     @Transactional
     public LoginResult login(LoginRequest request) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.email(), request.password())
-            );
-
-            UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+            UserPrincipal principal = authenticate(request.email(), request.password());
             Member member = memberRepository.findById(principal.memberId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
@@ -82,11 +69,7 @@ public class AuthService {
             refreshTokenRepository.findByMember(member)
                     .ifPresentOrElse(
                             existing -> existing.rotate(refreshToken, refreshExpiresAt),
-                            () -> refreshTokenRepository.save(RefreshToken.builder()
-                                    .member(member)
-                                    .token(refreshToken)
-                                    .expiresAt(refreshExpiresAt)
-                                    .build())
+                            () -> refreshTokenRepository.save(RefreshToken.issue(member, refreshToken, refreshExpiresAt))
                     );
 
             AuthResponse response = new AuthResponse(accessToken, "Bearer", !member.isProfileSetupCompleted());
@@ -144,5 +127,12 @@ public class AuthService {
     }
 
     public record LoginResult(AuthResponse response, String refreshToken, long refreshTokenValiditySeconds) {
+    }
+
+    private UserPrincipal authenticate(String email, String password) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password)
+        );
+        return (UserPrincipal) authentication.getPrincipal();
     }
 }

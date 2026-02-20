@@ -63,6 +63,28 @@ public class TeamMembers extends BaseEntity {
         this.teamProfileSetupCompleted = teamProfileSetupCompleted;
     }
 
+    public static TeamMembers createLeader(java.util.UUID teamId, Long memberId, String teamNickName, String teamProfileImage) {
+        return TeamMembers.builder()
+                .teamId(teamId)
+                .memberId(memberId)
+                .teamRole(TeamRole.ADMIN)
+                .teamNickName(teamNickName)
+                .teamProfileImage(teamProfileImage)
+                .teamProfileSetupCompleted(true)
+                .build();
+    }
+
+    public static TeamMembers createGeneral(java.util.UUID teamId, Long memberId) {
+        return TeamMembers.builder()
+                .teamId(teamId)
+                .memberId(memberId)
+                .teamRole(TeamRole.GENERAL)
+                .teamNickName(null)
+                .teamProfileImage(null)
+                .teamProfileSetupCompleted(false)
+                .build();
+    }
+
     public void updateTeamRole(TeamRole teamRole) {
         this.teamRole = teamRole;
     }

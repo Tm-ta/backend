@@ -43,4 +43,11 @@ public class Team extends BaseEntity{
     @Version
     private Long version;
 
+    public static Team create(String name, NamePolicy namePolicy, PostPermission postPermission) {
+        return Team.builder()
+                .name(name)
+                .namePolicy(namePolicy)
+                .postPermission(postPermission)
+                .build();
+    }
 }

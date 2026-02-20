@@ -40,6 +40,17 @@ public class Member extends BaseEntity{
     @Enumerated(value = STRING)
     private MemberRole role;
 
+    public static Member registerLocal(String email, String encodedPassword) {
+        return Member.builder()
+                .email(email)
+                .password(encodedPassword)
+                .authProvider(AuthProvider.LOCAL)
+                .role(MemberRole.GENERAL)
+                .emailVerified(false)
+                .profileSetupCompleted(false)
+                .build();
+    }
+
     public void updateProfile(String nickName, String profileImage) {
         this.nickName = nickName;
         this.profileImage = profileImage;

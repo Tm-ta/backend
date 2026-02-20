@@ -11,6 +11,8 @@ import com.example.tmta.entity.Member;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import com.example.tmta.entity.type.AppointmentState;
+import com.example.tmta.entity.type.NamePolicy;
+import com.example.tmta.entity.type.PostPermission;
 import com.example.tmta.entity.type.TeamRole;
 import com.example.tmta.exception.BusinessException;
 import com.example.tmta.exception.ErrorCode;
@@ -26,7 +28,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -97,17 +98,16 @@ public class TeamService {
         Member current = getCurrentMemberWithProfile();
         String normalizedTeamName = normalizeTeamName(requestDto.teamName());
 
-        Team team = requestDto.toEntity(normalizedTeamName);
+        Team team = Team.create(
+                normalizedTeamName,
+                requestDto.useRealName() ? NamePolicy.USE_REALNAME : NamePolicy.USE_NICKNAME,
+                requestDto.onlyLeaderCanPost() ? PostPermission.LEADER_ONLY : PostPermission.ALL_MEMBERS
+        );
         teamRepository.save(team);
 
-        TeamMembers creatorMembership = TeamMembers.builder()
-                .teamId(team.getId())
-                .memberId(current.getId())
-                .teamRole(TeamRole.ADMIN)
-                .teamNickName(current.getNickName())
-                .teamProfileImage(current.getProfileImage())
-                .teamProfileSetupCompleted(true)
-                .build();
+        TeamMembers creatorMembership = TeamMembers.createLeader(
+                team.getId(), current.getId(), current.getNickName(), current.getProfileImage()
+        );
         teamMembersRepository.save(creatorMembership);
 
         return new TeamSaveResponseDto(team);
@@ -152,14 +152,7 @@ public class TeamService {
             throw new BusinessException(ErrorCode.ALREADY_JOINED_TEAM);
         }
 
-        TeamMembers membership = TeamMembers.builder()
-                .teamId(teamId)
-                .memberId(current.getId())
-                .teamRole(TeamRole.GENERAL)
-                .teamNickName(null)
-                .teamProfileImage(null)
-                .teamProfileSetupCompleted(false)
-                .build();
+        TeamMembers membership = TeamMembers.createGeneral(teamId, current.getId());
         teamMembersRepository.save(membership);
     }
 
