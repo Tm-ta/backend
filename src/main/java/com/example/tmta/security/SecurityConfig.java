@@ -36,7 +36,13 @@ public class SecurityConfig {
                         .accessDeniedHandler(jsonAccessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/signup",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/refresh",
+                                "/api/v1/auth/email-verification/send",
+                                "/api/v1/auth/email-verification/confirm"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/terms/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .anyRequest().authenticated()

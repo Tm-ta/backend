@@ -22,6 +22,10 @@ public enum ErrorCode {
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "M003", "이메일 또는 비밀번호가 올바르지 않습니다."),
     INVALID_AUTH_PROVIDER(HttpStatus.BAD_REQUEST, "M004", "해당 회원은 이메일/비밀번호 로그인을 사용할 수 없습니다."),
     PROFILE_SETUP_REQUIRED(HttpStatus.FORBIDDEN, "M005", "프로필 초기 설정이 필요합니다."),
+    EMAIL_VERIFICATION_REQUIRED(HttpStatus.BAD_REQUEST, "M006", "이메일 인증이 필요합니다."),
+    EMAIL_VERIFICATION_MISMATCH(HttpStatus.BAD_REQUEST, "M007", "인증번호가 올바르지 않습니다."),
+    EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "M008", "인증번호가 만료되었습니다."),
+    EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "M009", "유효하지 않은 이메일 인증 토큰입니다."),
 
     // Appointment
     APPOINTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "해당 약속을 찾을 수 없습니다."),

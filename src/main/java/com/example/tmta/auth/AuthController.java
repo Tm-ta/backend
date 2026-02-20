@@ -1,6 +1,9 @@
 package com.example.tmta.auth;
 
 import com.example.tmta.auth.dto.AuthResponse;
+import com.example.tmta.auth.dto.EmailVerificationConfirmRequest;
+import com.example.tmta.auth.dto.EmailVerificationConfirmResponse;
+import com.example.tmta.auth.dto.EmailVerificationSendRequest;
 import com.example.tmta.auth.dto.LoginRequest;
 import com.example.tmta.auth.dto.SignUpRequest;
 import com.example.tmta.auth.dto.SignUpResponse;
@@ -26,6 +29,22 @@ public class AuthController {
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
 
     private final AuthService authService;
+    private final EmailVerificationService emailVerificationService;
+
+    @Operation(summary = "이메일 인증번호 발송", description = "회원가입을 위한 이메일 인증번호를 발송합니다.")
+    @PostMapping("/email-verification/send")
+    public ResponseEntity<Void> sendEmailVerificationCode(@Valid @RequestBody EmailVerificationSendRequest request) {
+        emailVerificationService.sendVerificationCode(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "이메일 인증번호 확인", description = "발송된 인증번호를 검증합니다.")
+    @PostMapping("/email-verification/confirm")
+    public ResponseEntity<EmailVerificationConfirmResponse> confirmEmailVerificationCode(
+            @Valid @RequestBody EmailVerificationConfirmRequest request
+    ) {
+        return ResponseEntity.ok(emailVerificationService.confirmVerificationCode(request));
+    }
 
     @Operation(summary = "회원가입", description = "이메일/비밀번호 기반 회원가입")
     @PostMapping("/signup")

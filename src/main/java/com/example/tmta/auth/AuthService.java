@@ -34,9 +34,12 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
+    private final EmailVerificationService emailVerificationService;
 
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
+        emailVerificationService.assertEmailVerifiedForSignUp(request.email(), request.verificationToken());
+
         if (memberRepository.findByEmail(request.email()).isPresent()) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATION);
         }
