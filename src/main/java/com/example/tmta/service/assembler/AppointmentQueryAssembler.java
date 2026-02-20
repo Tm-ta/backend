@@ -1,0 +1,113 @@
+package com.example.tmta.service.assembler;
+
+import com.example.tmta.dto.MemberInfo;
+import com.example.tmta.dto.appointment.AppointmentDetailResponseDto;
+import com.example.tmta.dto.appointment.AppointmentListResponseDto;
+import com.example.tmta.dto.appointment.AppointmentTimeTableResponseDto;
+import com.example.tmta.entity.Appointment;
+import com.example.tmta.entity.AppointmentDate;
+import com.example.tmta.entity.Member;
+import com.example.tmta.entity.TeamMembers;
+import com.example.tmta.entity.type.AppointmentState;
+import com.example.tmta.entity.type.TeamRole;
+import com.example.tmta.service.AppointmentSlotCalculator;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@Component
+public class AppointmentQueryAssembler {
+
+    public AppointmentDetailResponseDto toAppointmentDetailResponse(Appointment appointment,
+                                                                    List<TeamMembers> memberships,
+                                                                    Map<Long, Member> memberMap) {
+        List<LocalDate> dates = appointment.getAppointmentDateList().stream()
+                .map(AppointmentDate::getDate)
+                .sorted()
+                .toList();
+        LocalDate startDate = null;
+        LocalDate endDate = null;
+        if (!dates.isEmpty()) {
+            startDate = dates.get(0);
+            endDate = dates.get(dates.size() - 1);
+        }
+        LocalDate confirmedDate = null;
+        if (appointment.getState() == AppointmentState.CONFIRMED || appointment.getState() == AppointmentState.COMPLETE) {
+            confirmedDate = appointment.getConfirmedDate();
+        }
+
+        return new AppointmentDetailResponseDto(
+                appointment.getName(),
+                resolveOrganizerName(appointment, memberMap, memberships),
+                (long) memberships.size(),
+                startDate,
+                endDate,
+                memberships.stream()
+                        .map(membership -> toMemberInfo(membership, memberMap.get(membership.getMemberId())))
+                        .toList(),
+                appointment.getDescription(),
+                appointment.getState(),
+                confirmedDate
+        );
+    }
+
+    public AppointmentListResponseDto toCandidateResponse(UUID appointmentId, List<AppointmentSlotCalculator.SlotAggregate> slots) {
+        return new AppointmentListResponseDto(
+                appointmentId,
+                slots.stream().map(this::toAvailableDateTime).toList()
+        );
+    }
+
+    public AppointmentTimeTableResponseDto toTimeTableResponse(UUID appointmentId, List<AppointmentSlotCalculator.SlotAggregate> slots) {
+        return new AppointmentTimeTableResponseDto(
+                appointmentId,
+                slots.stream().map(this::toTimeTableSlot).toList()
+        );
+    }
+
+    private String resolveOrganizerName(Appointment appointment, Map<Long, Member> memberMap, List<TeamMembers> memberships) {
+        Member creator = memberMap.get(appointment.getCreatedByMemberId());
+        if (creator == null) {
+            TeamMembers leader = memberships.stream()
+                    .filter(m -> m.getTeamRole() == TeamRole.ADMIN)
+                    .findFirst()
+                    .orElse(null);
+            if (leader == null) {
+                return null;
+            }
+            Member leaderMember = memberMap.get(leader.getMemberId());
+            return leaderMember == null ? null : (leaderMember.getNickName() != null ? leaderMember.getNickName() : leaderMember.getName());
+        }
+        return creator.getNickName() != null ? creator.getNickName() : creator.getName();
+    }
+
+    private MemberInfo toMemberInfo(TeamMembers membership, Member member) {
+        if (member == null) {
+            return MemberInfo.of(membership.getMemberId(), null, null);
+        }
+        String displayName = membership.getTeamNickName() != null ? membership.getTeamNickName() : member.getNickName();
+        if (displayName == null) {
+            displayName = member.getName();
+        }
+        String profile = membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage();
+        return MemberInfo.of(member.getId(), displayName, profile);
+    }
+
+    private AppointmentListResponseDto.AvailableDateTime toAvailableDateTime(AppointmentSlotCalculator.SlotAggregate aggregate) {
+        return new AppointmentListResponseDto.AvailableDateTime(
+                aggregate.date(),
+                aggregate.startTime(),
+                aggregate.endTime(),
+                (long) aggregate.memberIds().size(),
+                new ArrayList<>(aggregate.memberNames())
+        );
+    }
+
+    private AppointmentTimeTableResponseDto.AvailableDateTimeSlot toTimeTableSlot(AppointmentSlotCalculator.SlotAggregate aggregate) {
+        return new AppointmentTimeTableResponseDto.AvailableDateTimeSlot(aggregate.date(), aggregate.startTime());
+    }
+}

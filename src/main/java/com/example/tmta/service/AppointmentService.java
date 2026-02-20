@@ -1,6 +1,5 @@
 package com.example.tmta.service;
 
-import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.dto.appointment.AppointmentCandidateFilter;
 import com.example.tmta.dto.appointment.AppointmentConfirmRequestDto;
 import com.example.tmta.dto.appointment.AppointmentDetailResponseDto;
@@ -25,6 +24,7 @@ import com.example.tmta.repository.MemberRepository;
 import com.example.tmta.repository.TeamMembersRepository;
 import com.example.tmta.repository.TeamRepository;
 import com.example.tmta.security.CurrentMemberProvider;
+import com.example.tmta.service.assembler.AppointmentQueryAssembler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +52,7 @@ public class AppointmentService {
     private final CurrentMemberProvider currentMemberProvider;
     private final AppointmentSlotCalculator slotCalculator;
     private final AppointmentCommandPolicy appointmentCommandPolicy;
+    private final AppointmentQueryAssembler appointmentQueryAssembler;
 
     @Transactional
     public UUID createTeamAppointment(UUID teamId, AppointmentSaveRequestDto request) {
@@ -90,33 +91,7 @@ public class AppointmentService {
         Map<Long, Member> memberMap = memberRepository.findAllById(memberIds).stream()
                 .collect(Collectors.toMap(Member::getId, member -> member));
 
-        List<LocalDate> dates = appointment.getAppointmentDateList().stream()
-                .map(AppointmentDate::getDate)
-                .sorted()
-                .toList();
-        LocalDate startDate = null;
-        LocalDate endDate = null;
-        if (!dates.isEmpty()) {
-            startDate = dates.get(0);
-            endDate = dates.get(dates.size() - 1);
-        }
-        LocalDate confirmedDate = null;
-        if (appointment.getState() == AppointmentState.CONFIRMED || appointment.getState() == AppointmentState.COMPLETE) {
-            confirmedDate = appointment.getConfirmedDate();
-        }
-        return new AppointmentDetailResponseDto(
-                appointment.getName(),
-                resolveOrganizerName(appointment, memberMap, memberships),
-                (long) memberships.size(),
-                startDate,
-                endDate,
-                memberships.stream()
-                        .map(membership -> toMemberInfo(membership, memberMap.get(membership.getMemberId())))
-                        .toList(),
-                appointment.getDescription(),
-                appointment.getState(),
-                confirmedDate
-        );
+        return appointmentQueryAssembler.toAppointmentDetailResponse(appointment, memberships, memberMap);
     }
 
     @Transactional(readOnly = true)
@@ -127,7 +102,7 @@ public class AppointmentService {
         Appointment appointment = getAppointmentDetail(teamId, appointmentId);
 
         List<AppointmentSlotCalculator.SlotAggregate> filtered = slotCalculator.applyFilter(aggregateAvailableSlots(appointment), filter);
-        return new AppointmentListResponseDto(appointmentId, filtered.stream().map(this::toAvailableDateTime).toList());
+        return appointmentQueryAssembler.toCandidateResponse(appointmentId, filtered);
     }
 
     @Transactional(readOnly = true)
@@ -138,7 +113,7 @@ public class AppointmentService {
         Appointment appointment = getAppointmentDetail(teamId, appointmentId);
 
         List<AppointmentSlotCalculator.SlotAggregate> filtered = slotCalculator.applyFilter(aggregateAvailableSlots(appointment), filter);
-        return new AppointmentTimeTableResponseDto(appointmentId, filtered.stream().map(this::toTimeTableSlot).toList());
+        return appointmentQueryAssembler.toTimeTableResponse(appointmentId, filtered);
     }
 
     @Transactional
@@ -315,34 +290,6 @@ public class AppointmentService {
         return time.isBefore(startTime) || !time.isBefore(endTime);
     }
 
-    private String resolveOrganizerName(Appointment appointment, Map<Long, Member> memberMap, List<TeamMembers> memberships) {
-        Member creator = memberMap.get(appointment.getCreatedByMemberId());
-        if (creator == null) {
-            TeamMembers leader = memberships.stream()
-                    .filter(m -> m.getTeamRole() == TeamRole.ADMIN)
-                    .findFirst()
-                    .orElse(null);
-            if (leader == null) {
-                return null;
-            }
-            Member leaderMember = memberMap.get(leader.getMemberId());
-            return leaderMember == null ? null : (leaderMember.getNickName() != null ? leaderMember.getNickName() : leaderMember.getName());
-        }
-        return creator.getNickName() != null ? creator.getNickName() : creator.getName();
-    }
-
-    private MemberInfo toMemberInfo(TeamMembers membership, Member member) {
-        if (member == null) {
-            return MemberInfo.of(membership.getMemberId(), null, null);
-        }
-        String displayName = membership.getTeamNickName() != null ? membership.getTeamNickName() : member.getNickName();
-        if (displayName == null) {
-            displayName = member.getName();
-        }
-        String profile = membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage();
-        return MemberInfo.of(member.getId(), displayName, profile);
-    }
-
     private List<AppointmentSlotCalculator.SlotAggregate> aggregateAvailableSlots(Appointment appointment) {
         List<AvailableTime> times = availableTimeRepository.findAllByAppointmentDateAppointment(appointment);
         List<Long> memberIds = times.stream().map(AvailableTime::getMemberId).distinct().toList();
@@ -351,17 +298,4 @@ public class AppointmentService {
         return slotCalculator.aggregateSlots(times, memberMap);
     }
 
-    private AppointmentListResponseDto.AvailableDateTime toAvailableDateTime(AppointmentSlotCalculator.SlotAggregate aggregate) {
-        return new AppointmentListResponseDto.AvailableDateTime(
-                aggregate.date(),
-                aggregate.startTime(),
-                aggregate.endTime(),
-                (long) aggregate.memberIds().size(),
-                new ArrayList<>(aggregate.memberNames())
-        );
-    }
-
-    private AppointmentTimeTableResponseDto.AvailableDateTimeSlot toTimeTableSlot(AppointmentSlotCalculator.SlotAggregate aggregate) {
-        return new AppointmentTimeTableResponseDto.AvailableDateTimeSlot(aggregate.date(), aggregate.startTime());
-    }
 }
