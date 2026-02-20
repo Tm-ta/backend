@@ -33,9 +33,6 @@ public class Member extends BaseEntity{
     private String profileImage;
     private boolean profileSetupCompleted;
     private boolean emailVerified;
-    // NOTE(email-verification): 아래 필드는 이메일 인증 기능 활성화 시 사용할 확장 포인트입니다.
-    // private String emailVerificationToken;
-    // private LocalDateTime emailVerificationExpiresAt;
     private boolean pushAlarmAgree;
     @Enumerated(value = STRING)
     private MemberRole role;
