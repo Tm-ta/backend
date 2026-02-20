@@ -1,10 +1,8 @@
 package com.example.tmta.entity;
 
-import com.example.tmta.entity.type.InviteState;
 import com.example.tmta.entity.type.TeamRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -25,7 +23,6 @@ import static jakarta.persistence.EnumType.STRING;
         indexes = {
                 @Index(name = "idx_team_members_team", columnList = "team_id"),
                 @Index(name = "idx_team_members_member", columnList = "member_id"),
-                @Index(name = "idx_team_members_invite_state", columnList = "invite_state"),
                 @Index(name = "idx_team_members_team_role", columnList = "team_role")
         }
 )
@@ -43,10 +40,6 @@ public class TeamMembers extends BaseEntity {
     private Long memberId;
 
     @Enumerated(value = STRING)
-    @Column(name = "invite_state", nullable = false)
-    private InviteState inviteState;
-
-    @Enumerated(value = STRING)
     @Column(name = "team_role", nullable = false)
     private TeamRole teamRole;
 
@@ -60,11 +53,10 @@ public class TeamMembers extends BaseEntity {
     private Long version;
 
     @Builder
-    public TeamMembers(java.util.UUID teamId, Long memberId, InviteState inviteState, TeamRole teamRole,
+    public TeamMembers(java.util.UUID teamId, Long memberId, TeamRole teamRole,
                        String teamNickName, String teamProfileImage, boolean teamProfileSetupCompleted) {
         this.teamId = teamId;
         this.memberId = memberId;
-        this.inviteState = inviteState;
         this.teamRole = teamRole;
         this.teamNickName = teamNickName;
         this.teamProfileImage = teamProfileImage;

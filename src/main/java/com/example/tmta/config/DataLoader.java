@@ -6,7 +6,6 @@ import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import com.example.tmta.entity.type.AppointmentState;
 import com.example.tmta.entity.type.AuthProvider;
-import com.example.tmta.entity.type.InviteState;
 import com.example.tmta.entity.type.MemberRole;
 import com.example.tmta.entity.type.TeamRole;
 import com.example.tmta.repository.AppointmentRepository;
@@ -91,7 +90,6 @@ public class DataLoader implements CommandLineRunner {
             TeamMembers tmAlphaAdmin = TeamMembers.builder()
                     .teamId(teamAlpha.getId())
                     .memberId(testMember.getId())
-                    .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.ADMIN)
                     .teamNickName(testMember.getNickName())
                     .teamProfileImage(testMember.getProfileImage())
@@ -103,7 +101,6 @@ public class DataLoader implements CommandLineRunner {
             TeamMembers tmAlphaMember1 = TeamMembers.builder()
                     .teamId(teamAlpha.getId())
                     .memberId(member1.getId())
-                    .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(member1.getNickName())
                     .teamProfileImage(member1.getProfileImage())
@@ -149,7 +146,6 @@ public class DataLoader implements CommandLineRunner {
             TeamMembers tmBetaAdmin = TeamMembers.builder()
                     .teamId(teamBeta.getId())
                     .memberId(member1.getId())
-                    .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.ADMIN)
                     .teamNickName(member1.getNickName())
                     .teamProfileImage(member1.getProfileImage())
@@ -161,7 +157,6 @@ public class DataLoader implements CommandLineRunner {
             TeamMembers tmBetaTestMember = TeamMembers.builder()
                     .teamId(teamBeta.getId())
                     .memberId(testMember.getId())
-                    .inviteState(InviteState.ACCEPT)
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(testMember.getNickName())
                     .teamProfileImage(testMember.getProfileImage())
@@ -173,7 +168,6 @@ public class DataLoader implements CommandLineRunner {
             TeamMembers tmBetaMember2 = TeamMembers.builder()
                     .teamId(teamBeta.getId())
                     .memberId(member2.getId())
-                    .inviteState(InviteState.PENDING) // Pending invite
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(member2.getNickName())
                     .teamProfileImage(member2.getProfileImage())

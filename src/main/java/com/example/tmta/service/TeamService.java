@@ -11,7 +11,6 @@ import com.example.tmta.entity.Member;
 import com.example.tmta.entity.Team;
 import com.example.tmta.entity.TeamMembers;
 import com.example.tmta.entity.type.AppointmentState;
-import com.example.tmta.entity.type.InviteState;
 import com.example.tmta.entity.type.TeamRole;
 import com.example.tmta.exception.BusinessException;
 import com.example.tmta.exception.ErrorCode;
@@ -117,7 +116,6 @@ public class TeamService {
         TeamMembers creatorMembership = TeamMembers.builder()
                 .teamId(team.getId())
                 .memberId(current.getId())
-                .inviteState(InviteState.ACCEPT)
                 .teamRole(TeamRole.ADMIN)
                 .teamNickName(current.getNickName())
                 .teamProfileImage(current.getProfileImage())
@@ -170,7 +168,6 @@ public class TeamService {
         TeamMembers membership = TeamMembers.builder()
                 .teamId(teamId)
                 .memberId(current.getId())
-                .inviteState(InviteState.PENDING)
                 .teamRole(TeamRole.GENERAL)
                 .teamNickName(null)
                 .teamProfileImage(null)
