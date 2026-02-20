@@ -2,6 +2,7 @@ package com.example.tmta.service;
 
 import com.example.tmta.dto.MemberInfo;
 import com.example.tmta.dto.appointment.AppointmentCandidateFilter;
+import com.example.tmta.dto.appointment.AppointmentConfirmRequestDto;
 import com.example.tmta.dto.appointment.AppointmentDetailResponseDto;
 import com.example.tmta.dto.appointment.AppointmentListResponseDto;
 import com.example.tmta.dto.appointment.AppointmentSaveRequestDto;
@@ -202,6 +203,51 @@ public class AppointmentService {
                 availableTimeRepository.save(AvailableTime.of(current.getId(), date, range.start(), range.end()));
             }
         }
+    }
+
+    @Transactional
+    public void confirmTeamAppointment(UUID teamId, UUID appointmentId, AppointmentConfirmRequestDto request) {
+        Member current = getCurrentMemberWithProfile();
+        ensureTeamExists(teamId);
+        TeamMembers membership = requireMembership(teamId, current.getId());
+        Appointment appointment = getAppointmentDetail(teamId, appointmentId);
+        requireCanManageAppointment(membership, appointment, current.getId());
+
+        if (request == null || request.date() == null) {
+            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+        }
+        if (appointment.getState() == AppointmentState.CONFIRMED
+                || appointment.getState() == AppointmentState.COMPLETE
+                || appointment.getState() == AppointmentState.CANCELED
+                || appointment.getState() == AppointmentState.EXPIRED) {
+            throw new BusinessException(ErrorCode.INVALID_APPOINTMENT_STATE);
+        }
+
+        Set<LocalDate> appointmentDates = appointment.getAppointmentDateList().stream()
+                .map(AppointmentDate::getDate)
+                .collect(Collectors.toSet());
+        if (!appointmentDates.contains(request.date())) {
+            throw new BusinessException(ErrorCode.APPOINTMENT_DATE_MISMATCH);
+        }
+
+        LocalTime confirmedStart;
+        LocalTime confirmedEnd;
+        if (appointment.isOnlyDate()) {
+            confirmedStart = DEFAULT_START_TIME;
+            confirmedEnd = DEFAULT_END_TIME;
+        } else {
+            if (request.startTime() == null || request.endTime() == null || !request.endTime().isAfter(request.startTime())) {
+                throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
+            }
+            if (request.startTime().isBefore(appointment.getStartTime()) || request.endTime().isAfter(appointment.getEndTime())) {
+                throw new BusinessException(ErrorCode.APPOINTMENT_TIME_OUT_OF_RANGE);
+            }
+            confirmedStart = request.startTime();
+            confirmedEnd = request.endTime();
+        }
+
+        appointment.confirm(request.date(), confirmedStart, confirmedEnd);
+        appointment.updateState(AppointmentState.CONFIRMED);
     }
 
     @Transactional

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.tmta.dto.appointment.AppointmentCandidateFilter;
+import com.example.tmta.dto.appointment.AppointmentConfirmRequestDto;
 import com.example.tmta.dto.appointment.AppointmentListResponseDto;
 import com.example.tmta.dto.appointment.AppointmentDetailResponseDto;
 import com.example.tmta.dto.appointment.AppointmentSaveRequestDto;
@@ -27,6 +28,7 @@ import com.example.tmta.service.AppointmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springdoc.core.annotations.ParameterObject;
 import lombok.RequiredArgsConstructor;
 
@@ -77,6 +79,15 @@ private final AppointmentService appointmentService;
 	@PostMapping("/{appointmentId}")
 	public ResponseEntity<Void> registerTeamAppointmentTime(@Parameter(description = "팀 ID") @PathVariable UUID teamId, @Parameter(description = "약속 ID") @PathVariable UUID appointmentId, @RequestBody AppointmentTimeRegisterRequestDto request){
 		appointmentService.registerTeamAppointmentTime(teamId, appointmentId, request);
+		return ResponseEntity.noContent().build();
+	}
+
+	@Operation(summary = "팀 약속 확정")
+	@PostMapping("/{appointmentId}/confirm")
+	public ResponseEntity<Void> confirmTeamAppointment(@Parameter(description = "팀 ID") @PathVariable UUID teamId,
+		@Parameter(description = "약속 ID") @PathVariable UUID appointmentId,
+		@Valid @RequestBody AppointmentConfirmRequestDto request) {
+		appointmentService.confirmTeamAppointment(teamId, appointmentId, request);
 		return ResponseEntity.noContent().build();
 	}
 

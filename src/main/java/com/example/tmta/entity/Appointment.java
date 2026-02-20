@@ -105,6 +105,14 @@ public class Appointment extends BaseEntity{
         this.setting = setting;
     }
 
+    public void confirm(LocalDate date, LocalTime startTime, LocalTime endTime) {
+        if (this.finalTime == null) {
+            this.finalTime = FinalTime.of(this, date, startTime, endTime);
+            return;
+        }
+        this.finalTime.update(date, startTime, endTime);
+    }
+
     public boolean isOnlyDate() {
         if (setting != null) {
             return setting.isOnlyDate();
