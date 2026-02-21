@@ -56,6 +56,7 @@ private final AppointmentService appointmentService;
 - `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 또는 파라미터 검증에 실패한 경우.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 					"""
@@ -68,7 +69,7 @@ private final AppointmentService appointmentService;
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀 없음 (T001)",
+			@ApiResponse(responseCode = "404", description = "팀/회원 없음 (T001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping
@@ -88,6 +89,7 @@ private final AppointmentService appointmentService;
 ### 예외상황 / 에러코드
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -101,7 +103,7 @@ private final AppointmentService appointmentService;
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@GetMapping("/{appointmentId}")
@@ -122,6 +124,7 @@ private final AppointmentService appointmentService;
 - `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 또는 파라미터 검증에 실패한 경우.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -135,7 +138,7 @@ private final AppointmentService appointmentService;
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@GetMapping("/{appointmentId}/list")
@@ -157,6 +160,7 @@ private final AppointmentService appointmentService;
 - `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 또는 파라미터 검증에 실패한 경우.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -170,7 +174,7 @@ private final AppointmentService appointmentService;
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@GetMapping("/{appointmentId}/timetable")
@@ -193,6 +197,7 @@ private final AppointmentService appointmentService;
 - `INVALID_APPOINTMENT_STATE (A002, 400)` : 현재 약속 상태에서 수행할 수 없는 요청인 경우.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -200,13 +205,13 @@ private final AppointmentService appointmentService;
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204", description = "마감 성공"),
-			@ApiResponse(responseCode = "400", description = "권한 없음/상태 오류/멤버 아님 (C005, A002, T005)",
+			@ApiResponse(responseCode = "400", description = "상태 오류/멤버 아님 (A002, T005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "401", description = "인증 필요 (C004)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
+			@ApiResponse(responseCode = "403", description = "권한 없음/프로필 설정 필요 (C005, M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping("/{appointmentId}/close")
@@ -234,6 +239,7 @@ private final AppointmentService appointmentService;
 - `APPOINTMENT_TIME_OUT_OF_RANGE (A004, 400)` : 요청 시간이 약속 허용 시간 범위를 벗어난 경우.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -247,7 +253,7 @@ private final AppointmentService appointmentService;
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping("/{appointmentId}")
@@ -275,6 +281,7 @@ private final AppointmentService appointmentService;
 - `APPOINTMENT_TIME_OUT_OF_RANGE (A004, 400)` : 요청 시간이 약속 허용 시간 범위를 벗어난 경우.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -282,13 +289,13 @@ private final AppointmentService appointmentService;
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204", description = "확정 성공"),
-			@ApiResponse(responseCode = "400", description = "입력/상태/날짜-시간 범위 오류 (C001, A002, A003, A004, T005, C005)",
+			@ApiResponse(responseCode = "400", description = "입력/상태/날짜-시간 범위 오류 (C001, A002, A003, A004, T005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "401", description = "인증 필요 (C004)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
+			@ApiResponse(responseCode = "403", description = "권한 없음/프로필 설정 필요 (C005, M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PostMapping("/{appointmentId}/confirm")
@@ -311,6 +318,7 @@ private final AppointmentService appointmentService;
 - `FORBIDDEN (C005, 403)` : 약속 관리 권한 없음.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -318,13 +326,13 @@ private final AppointmentService appointmentService;
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204", description = "삭제 성공"),
-			@ApiResponse(responseCode = "400", description = "권한 없음/멤버 아님 (C005, T005)",
+			@ApiResponse(responseCode = "400", description = "멤버 아님 (T005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "401", description = "인증 필요 (C004)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
+			@ApiResponse(responseCode = "403", description = "권한 없음/프로필 설정 필요 (C005, M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@DeleteMapping("/{appointmentId}")
@@ -348,6 +356,7 @@ private final AppointmentService appointmentService;
 - `FORBIDDEN (C005, 403)` : 약속 관리 권한 없음.
 - `NOT_A_MEMBER_OF_TEAM (T005, 400)` : 요청 사용자가 해당 팀 멤버가 아닌 경우.
 - `UNAUTHORIZED (C004, 401)` : 인증 정보가 없거나 유효하지 않은 경우.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 사용자 프로필 초기 설정이 완료되지 않은 경우.
 - `TEAM_NOT_FOUND (T001, 404)` : 요청한 팀을 찾을 수 없는 경우.
 - `APPOINTMENT_NOT_FOUND (A001, 404)` : 요청한 약속을 찾을 수 없는 경우.
@@ -355,13 +364,13 @@ private final AppointmentService appointmentService;
 	)
 	@ApiResponses(value = {
 			@ApiResponse(responseCode = "204", description = "수정 성공"),
-			@ApiResponse(responseCode = "400", description = "입력 오류/권한 없음/멤버 아님 (C001, C005, T005)",
+			@ApiResponse(responseCode = "400", description = "입력 오류/멤버 아님 (C001, T005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
 			@ApiResponse(responseCode = "401", description = "인증 필요 (C004)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
+			@ApiResponse(responseCode = "403", description = "권한 없음/프로필 설정 필요 (C005, M005)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-			@ApiResponse(responseCode = "404", description = "팀/약속 없음 (T001, A001)",
+			@ApiResponse(responseCode = "404", description = "팀/약속/회원 없음 (T001, A001, M001)",
 					content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
 	})
 	@PutMapping("/{appointmentId}")

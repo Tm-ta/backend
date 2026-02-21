@@ -66,6 +66,7 @@ public class TeamController {
 - `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 검증 실패 또는 teamName blank.
 - `UNAUTHORIZED (C004, 401)` : 인증되지 않은 요청.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 프로필 초기 설정 미완료.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
                     """
     )
     @ApiResponses(value = {
@@ -75,6 +76,8 @@ public class TeamController {
             @ApiResponse(responseCode = "401", description = "인증 필요 (C004)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "회원 없음 (M001)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
@@ -95,6 +98,7 @@ public class TeamController {
 - `UNAUTHORIZED (C004, 401)` : 인증되지 않은 요청.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 프로필 초기 설정 미완료.
 - `TEAM_NOT_FOUND (T001, 404)` : 팀 없음.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
                     """
     )
     @ApiResponses(value = {
@@ -105,7 +109,7 @@ public class TeamController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "팀을 찾을 수 없습니다 (T001)",
+            @ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없습니다 (T001, M001)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping("/{teamId}")
@@ -126,6 +130,7 @@ public class TeamController {
 - `UNAUTHORIZED (C004, 401)` : 인증되지 않은 요청.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 프로필 초기 설정 미완료.
 - `TEAM_NOT_FOUND (T001, 404)` : 팀 없음.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
                     """
     )
     @ApiResponses(value = {
@@ -161,6 +166,7 @@ public class TeamController {
 - `UNAUTHORIZED (C004, 401)` : 인증되지 않은 요청.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 프로필 초기 설정 미완료.
 - `TEAM_NOT_FOUND (T001, 404)` : 팀 없음.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
                     """
     )
     @ApiResponses(value = {
@@ -195,6 +201,7 @@ public class TeamController {
 - `UNAUTHORIZED (C004, 401)` : 인증되지 않은 요청.
 - `PROFILE_SETUP_REQUIRED (M005, 403)` : 프로필 초기 설정 미완료.
 - `TEAM_NOT_FOUND (T001, 404)` : 팀 없음.
+- `MEMBER_NOT_FOUND (M001, 404)` : 인증 주체 회원을 찾을 수 없는 경우.
                     """
     )
     @ApiResponses(value = {
