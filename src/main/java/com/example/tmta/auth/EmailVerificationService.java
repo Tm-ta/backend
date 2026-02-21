@@ -7,8 +7,8 @@ import com.example.tmta.auth.verification.EmailVerificationRecord;
 import com.example.tmta.auth.verification.EmailVerificationSender;
 import com.example.tmta.auth.verification.EmailVerificationStore;
 import com.example.tmta.auth.verification.EmailVerificationTokenProvider;
-import com.example.tmta.exception.BusinessException;
-import com.example.tmta.exception.ErrorCode;
+import com.example.tmta.common.exception.BusinessException;
+import com.example.tmta.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

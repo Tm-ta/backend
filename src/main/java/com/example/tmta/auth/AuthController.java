@@ -7,7 +7,7 @@ import com.example.tmta.auth.dto.EmailVerificationSendRequest;
 import com.example.tmta.auth.dto.LoginRequest;
 import com.example.tmta.auth.dto.SignUpRequest;
 import com.example.tmta.auth.dto.SignUpResponse;
-import com.example.tmta.security.UserPrincipal;
+import com.example.tmta.common.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;

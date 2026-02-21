@@ -1,8 +1,8 @@
 package com.example.tmta.member;
 
-import com.example.tmta.entity.Member;
+import com.example.tmta.member.entity.Member;
 import com.example.tmta.member.dto.ProfileSetupRequest;
-import com.example.tmta.security.CurrentMemberProvider;
+import com.example.tmta.common.security.CurrentMemberProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

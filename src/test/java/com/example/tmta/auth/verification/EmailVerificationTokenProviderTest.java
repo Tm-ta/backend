@@ -1,8 +1,8 @@
 package com.example.tmta.auth.verification;
 
-import com.example.tmta.exception.BusinessException;
-import com.example.tmta.exception.ErrorCode;
-import com.example.tmta.security.JwtProperties;
+import com.example.tmta.common.exception.BusinessException;
+import com.example.tmta.common.exception.ErrorCode;
+import com.example.tmta.common.security.JwtProperties;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;

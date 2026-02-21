@@ -14,20 +14,24 @@ Spring Boot 3.2, Java 21, JPA, Spring Security(JWT) 기반으로 구성되어 �
 - Gradle
 - Swagger/OpenAPI (`springdoc-openapi`)
 
-## 2. 프로젝트 구조
+## 2. 프로젝트 구조 (Feature-First)
 
 ```text
 src/main/java/com/example/tmta
-├── auth            # 회원가입/로그인/토큰 재발급/이메일 인증
-├── controller      # Team, Appointment, Terms API
-├── member          # 회원 프로필 설정 API
-├── service         # 비즈니스 로직
-├── repository      # JPA Repository
-├── entity          # 도메인 엔티티
-├── security        # JWT 필터, 시큐리티 설정
-├── exception       # 공통 예외/에러코드/핸들러
-└── config          # Swagger, 데이터 로더(dev)
+├── appointment      # 약속 도메인 (controller/service/dto/entity/repository)
+├── auth             # 인증 도메인 (controller/service/dto/entity/repository/verification)
+├── member           # 회원 도메인 (controller/service/dto/entity/repository)
+├── team             # 팀 도메인 (controller/service/dto/entity/repository)
+├── terms            # 약관 도메인 (controller/service/dto)
+└── common           # 공통 인프라/횡단관심사 (security/exception/config/common dto/entity)
 ```
+
+### 2.1 구조 원칙
+
+- 도메인 단위 패키지(`appointment`, `team`, `auth` ...)를 최상위에 둡니다.
+- 각 도메인 내부에 필요한 계층(`dto`, `entity`, `repository`)을 함께 둡니다.
+- 공통 요소만 `common`으로 분리합니다. (보안, 예외, 공통 설정 등)
+- `TmtaApplication`은 루트 패키지에 유지해 컴포넌트 스캔 범위를 안전하게 보장합니다.
 
 ## 3. 실행 방법
 
@@ -158,4 +162,3 @@ docker compose up -d --build
 10. 운영 프로파일에서 `ddl-auto=update`를 사용해 스키마 변경 통제가 어려울 수 있습니다.
 11. Swagger 설정에 운영 서버 IP가 하드코딩되어 인프라 정보 노출 위험이 있습니다.
 12. CI/CD 워크플로 파일(`.github/workflows/deploy.yml`)이 사실상 비어 있어 자동 배포 체계가 부재합니다.
-
