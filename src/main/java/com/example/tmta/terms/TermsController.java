@@ -65,7 +65,7 @@ public class TermsController {
     })
     @GetMapping("/{code}")
     public ResponseEntity<TermsDetailResponseDto> getTermsDetail(
-            @Parameter(description = "약관 코드 (예: SERVICE, PRIVACY, MARKETING)")
+            @Parameter(description = "약관 코드 (예: SERVICE, PRIVACY, AGE14, MARKETING)")
             @PathVariable String code
     ) {
         return ResponseEntity.ok(termsService.getTermsDetail(code));

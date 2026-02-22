@@ -39,13 +39,18 @@ public class AuthService {
     /** 이메일 인증 토큰이 검증된 사용자만 로컬 회원가입을 처리합니다. */
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
+        validateRequiredTermsAgreement(request);
         emailVerificationService.assertEmailVerifiedForSignUp(request.email(), request.verificationToken());
 
         if (memberRepository.findByEmail(request.email()).isPresent()) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATION);
         }
 
-        Member member = Member.registerLocal(request.email(), passwordEncoder.encode(request.password()));
+        Member member = Member.registerLocal(
+                request.email(),
+                passwordEncoder.encode(request.password()),
+                Boolean.TRUE.equals(request.marketingAgreed())
+        );
 
         // TODO(feature-social-login): Google/Naver OAuth 로그인 연동 및 providerId 계정 매핑을 구현합니다.
         // TODO(feature-email-verification): 이메일 인증 이력/정책(재시도 제한, 감사로그) 저장소를 외부 DB로 확장합니다.
@@ -53,6 +58,14 @@ public class AuthService {
         memberRepository.save(member);
 
         return new SignUpResponse(member.getId(), member.getEmail());
+    }
+
+    private void validateRequiredTermsAgreement(SignUpRequest request) {
+        if (!Boolean.TRUE.equals(request.serviceTermsAgreed())
+                || !Boolean.TRUE.equals(request.privacyPolicyAgreed())
+                || !Boolean.TRUE.equals(request.ageOver14Agreed())) {
+            throw new BusinessException(ErrorCode.REQUIRED_TERMS_AGREEMENT);
+        }
     }
 
     /** 로컬 계정 인증 후 Access/Refresh 토큰을 발급합니다. */

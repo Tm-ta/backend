@@ -38,7 +38,7 @@ public class Member extends BaseEntity{
     @Enumerated(value = STRING)
     private MemberRole role;
 
-    public static Member registerLocal(String email, String encodedPassword) {
+    public static Member registerLocal(String email, String encodedPassword, boolean marketingAgreed) {
         return Member.builder()
                 .email(email)
                 .password(encodedPassword)
@@ -46,6 +46,7 @@ public class Member extends BaseEntity{
                 .role(MemberRole.GENERAL)
                 .emailVerified(false)
                 .profileSetupCompleted(false)
+                .pushAlarmAgree(marketingAgreed)
                 .build();
     }
 

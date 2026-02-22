@@ -76,7 +76,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("이메일 인증 완료 + 중복 없음이면 회원가입 성공")
         void signUpSuccess() {
-            SignUpRequest request = new SignUpRequest("user@test.com", "Passw0rd!", "verification-token");
+            SignUpRequest request = new SignUpRequest("user@test.com", "Passw0rd!", "verification-token", true, true, true, true);
 
             when(memberRepository.findByEmail(request.email())).thenReturn(Optional.empty());
             when(passwordEncoder.encode(request.password())).thenReturn("encoded-password");
@@ -89,14 +89,17 @@ class AuthServiceTest {
             var response = authService.signUp(request);
 
             verify(emailVerificationService).assertEmailVerifiedForSignUp(request.email(), request.verificationToken());
+            ArgumentCaptor<Member> memberCaptor = ArgumentCaptor.forClass(Member.class);
+            verify(memberRepository).save(memberCaptor.capture());
             assertThat(response.memberId()).isEqualTo(100L);
             assertThat(response.email()).isEqualTo("user@test.com");
+            assertThat(memberCaptor.getValue().isPushAlarmAgree()).isTrue();
         }
 
         @Test
         @DisplayName("이미 가입된 이메일이면 EMAIL_DUPLICATION 예외")
         void signUpDuplicateEmail() {
-            SignUpRequest request = new SignUpRequest("dup@test.com", "Passw0rd!", "verification-token");
+            SignUpRequest request = new SignUpRequest("dup@test.com", "Passw0rd!", "verification-token", true, true, true, false);
             when(memberRepository.findByEmail(request.email())).thenReturn(Optional.of(member));
 
             assertThatThrownBy(() -> authService.signUp(request))
@@ -104,6 +107,20 @@ class AuthServiceTest {
                     .extracting(e -> ((BusinessException) e).getErrorCode())
                     .isEqualTo(ErrorCode.EMAIL_DUPLICATION);
 
+            verify(memberRepository, never()).save(any(Member.class));
+        }
+
+        @Test
+        @DisplayName("필수 약관 미동의면 REQUIRED_TERMS_AGREEMENT 예외")
+        void signUpRequiredTermsNotAgreed() {
+            SignUpRequest request = new SignUpRequest("user@test.com", "Passw0rd!", "verification-token", false, true, true, true);
+
+            assertThatThrownBy(() -> authService.signUp(request))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.REQUIRED_TERMS_AGREEMENT);
+
+            verify(emailVerificationService, never()).assertEmailVerifiedForSignUp(anyString(), anyString());
             verify(memberRepository, never()).save(any(Member.class));
         }
     }

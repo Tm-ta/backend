@@ -94,12 +94,15 @@ public class AuthController {
             description = """
 ### 제약조건
 - **회원가입 전 이메일 인증 확인 API에서 발급한 verificationToken이 필요합니다.**
+- 서비스 이용약관, 개인정보 처리방침, 만 14세 이상 동의는 모두 true여야 합니다.
+- 마케팅 정보 수신 동의는 선택이며 false/null이어도 회원가입이 가능합니다.
 - 비밀번호는 공백 없이 8자 이상이며 영문/숫자를 각각 1개 이상 포함해야 합니다.
 - 동일 문자/숫자를 3회 이상 연속으로 사용할 수 없습니다. (예: aaa, 111)
 - 동일 이메일은 중복 가입할 수 없습니다.
 
 ### 예외상황 / 에러코드
-- `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 검증 실패.
+- `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 검증 실패(비밀번호 정책 위반 등).
+- `REQUIRED_TERMS_AGREEMENT (M010, 400)` : 필수 약관(서비스/개인정보/만 14세 이상) 중 하나라도 미동의.
 - `EMAIL_VERIFICATION_REQUIRED (M006, 400)` : 이메일 인증 미완료 또는 이메일-토큰 불일치.
 - `EMAIL_VERIFICATION_TOKEN_INVALID (M009, 400)` : 유효하지 않은 verificationToken.
 - `EMAIL_DUPLICATION (M002, 409)` : 이미 가입된 이메일.
@@ -107,7 +110,7 @@ public class AuthController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "회원가입 성공"),
-            @ApiResponse(responseCode = "400", description = "입력/인증 오류 (C001, M006, M009)",
+            @ApiResponse(responseCode = "400", description = "입력/약관/인증 오류 (C001, M010, M006, M009)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "409", description = "이메일 중복 (M002)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))

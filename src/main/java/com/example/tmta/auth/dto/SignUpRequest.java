@@ -21,6 +21,14 @@ public record SignUpRequest(
         ) String password,
         @Schema(description = "이메일 인증번호 확인 API에서 발급된 토큰")
         @NotBlank(message = "이메일 인증 토큰은 필수입니다.")
-        String verificationToken
+        String verificationToken,
+        @Schema(description = "서비스 이용약관 동의 여부(필수)", example = "true")
+        Boolean serviceTermsAgreed,
+        @Schema(description = "개인정보 처리방침 동의 여부(필수)", example = "true")
+        Boolean privacyPolicyAgreed,
+        @Schema(description = "만 14세 이상 동의 여부(필수)", example = "true")
+        Boolean ageOver14Agreed,
+        @Schema(description = "마케팅 정보 수신 동의 여부(선택)", example = "false")
+        Boolean marketingAgreed
 ) {
 }

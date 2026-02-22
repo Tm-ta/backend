@@ -55,6 +55,17 @@ public class TermsService {
                         """
         ));
         register(new TermsDocument(
+                "AGE14",
+                "만 14세 이상입니다",
+                true,
+                "v1.0",
+                LocalDate.of(2026, 2, 20),
+                """
+                        본인은 만 14세 이상임을 확인합니다.
+                        만 14세 미만은 법정대리인 동의 절차가 필요할 수 있습니다.
+                        """
+        ));
+        register(new TermsDocument(
                 "MARKETING",
                 "마케팅 정보 수신 동의",
                 false,
