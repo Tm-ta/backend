@@ -8,3 +8,18 @@ jwt:
   access-token-validity-seconds: 3153600000
   refresh-token-validity-seconds: 1209600
   issuer: tmta
+
+tmta:
+  email:
+    verification:
+      code-length: 6
+      code-ttl-seconds: 300
+      verification-token-ttl-seconds: 1800
+      resend-cooldown-seconds: 60
+      rate-limit-window-seconds: 3600
+      max-sends-per-window: 5
+      max-verify-attempts: 5
+    ses:
+      enabled: ${SES_ENABLED:false}
+      region: ${AWS_REGION:ap-northeast-2}
+      from-address: ${SES_FROM_ADDRESS:no-reply@example.com}

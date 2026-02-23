@@ -27,6 +27,9 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "M008", "인증번호가 만료되었습니다."),
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "M009", "유효하지 않은 이메일 인증 토큰입니다."),
     REQUIRED_TERMS_AGREEMENT(HttpStatus.BAD_REQUEST, "M010", "필수 약관 동의가 필요합니다."),
+    EMAIL_VERIFICATION_RESEND_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "M011", "인증번호 재요청은 잠시 후 다시 시도해주세요."),
+    EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "M012", "인증번호 요청 횟수를 초과했습니다."),
+    EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "M013", "인증번호 입력 시도 횟수를 초과했습니다."),
 
     // Appointment
     APPOINTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "해당 약속을 찾을 수 없습니다."),
