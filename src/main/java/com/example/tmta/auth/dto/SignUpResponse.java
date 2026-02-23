@@ -1,11 +1,12 @@
 package com.example.tmta.auth.dto;
 
-import lombok.Builder;
-import lombok.Getter;
+import io.swagger.v3.oas.annotations.media.Schema;
 
-@Getter
-@Builder
-public class SignUpResponse {
-    private Long memberId;
-    private String email;
+@Schema(description = "회원가입 응답 DTO")
+public record SignUpResponse(
+        @Schema(description = "회원 ID", example = "1")
+        Long memberId,
+        @Schema(description = "이메일", example = "user@example.com")
+        String email
+) {
 }

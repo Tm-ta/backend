@@ -1,10 +1,9 @@
 package com.example.tmta.member;
 
-import com.example.tmta.entity.Member;
-import com.example.tmta.exception.BusinessException;
-import com.example.tmta.exception.ErrorCode;
+import com.example.tmta.member.dto.MyProfileResponse;
 import com.example.tmta.member.dto.ProfileSetupRequest;
-import com.example.tmta.security.CurrentMemberProvider;
+import com.example.tmta.member.entity.Member;
+import com.example.tmta.common.security.CurrentMemberProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,16 +14,25 @@ public class MemberService {
 
     private final CurrentMemberProvider currentMemberProvider;
 
+    /** 현재 로그인 사용자의 프로필(닉네임/이미지)을 설정합니다. */
     @Transactional
     public void setupProfile(ProfileSetupRequest request) {
         Member member = currentMemberProvider.getCurrentMember();
 
-        if (request.getNickname() == null || request.getNickname().isBlank()) {
-            throw new BusinessException(ErrorCode.INVALID_INPUT_VALUE);
-        }
-
         // 최초 설정 중 이탈한 사용자를 위해, profileSetupCompleted 플래그를 서버에서 관리합니다.
         // 이 API를 재호출하면 언제든 이어서 설정 완료할 수 있습니다.
-        member.updateProfile(request.getNickname(), request.getProfileImage());
+        member.updateProfile(request.nickname(), request.profileImage());
+    }
+
+    /** 현재 로그인 사용자의 기본 프로필 정보를 조회합니다. */
+    @Transactional(readOnly = true)
+    public MyProfileResponse getMyProfile() {
+        Member member = currentMemberProvider.getCurrentMember();
+        return new MyProfileResponse(
+                member.getId(),
+                member.getEmail(),
+                member.getNickName(),
+                member.getProfileImage()
+        );
     }
 }

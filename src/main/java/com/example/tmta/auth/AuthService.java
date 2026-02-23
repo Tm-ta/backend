@@ -4,17 +4,15 @@ import com.example.tmta.auth.dto.AuthResponse;
 import com.example.tmta.auth.dto.LoginRequest;
 import com.example.tmta.auth.dto.SignUpRequest;
 import com.example.tmta.auth.dto.SignUpResponse;
-import com.example.tmta.entity.Member;
-import com.example.tmta.entity.RefreshToken;
-import com.example.tmta.entity.type.AuthProvider;
-import com.example.tmta.entity.type.MemberRole;
-import com.example.tmta.exception.BusinessException;
-import com.example.tmta.exception.ErrorCode;
-import com.example.tmta.repository.MemberRepository;
-import com.example.tmta.repository.RefreshTokenRepository;
-import com.example.tmta.security.JwtProperties;
-import com.example.tmta.security.JwtTokenProvider;
-import com.example.tmta.security.UserPrincipal;
+import com.example.tmta.member.entity.Member;
+import com.example.tmta.auth.entity.RefreshToken;
+import com.example.tmta.common.exception.BusinessException;
+import com.example.tmta.common.exception.ErrorCode;
+import com.example.tmta.member.repository.MemberRepository;
+import com.example.tmta.auth.repository.RefreshTokenRepository;
+import com.example.tmta.common.security.JwtProperties;
+import com.example.tmta.common.security.JwtTokenProvider;
+import com.example.tmta.common.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -36,45 +34,45 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
     private final JwtProperties jwtProperties;
+    private final EmailVerificationService emailVerificationService;
 
+    /** 이메일 인증 토큰이 검증된 사용자만 로컬 회원가입을 처리합니다. */
     @Transactional
     public SignUpResponse signUp(SignUpRequest request) {
-        if (memberRepository.findByEmail(request.getEmail()).isPresent()) {
+        validateRequiredTermsAgreement(request);
+        emailVerificationService.assertEmailVerifiedForSignUp(request.email(), request.verificationToken());
+
+        if (memberRepository.findByEmail(request.email()).isPresent()) {
             throw new BusinessException(ErrorCode.EMAIL_DUPLICATION);
         }
 
-        Member member = Member.builder()
-                .email(request.getEmail())
-                .password(passwordEncoder.encode(request.getPassword()))
-                .authProvider(AuthProvider.LOCAL)
-                .role(MemberRole.GENERAL)
-                .emailVerified(false)
-                .profileSetupCompleted(false)
-                .build();
+        Member member = Member.registerLocal(
+                request.email(),
+                passwordEncoder.encode(request.password()),
+                Boolean.TRUE.equals(request.marketingAgreed())
+        );
 
-        // TODO(social-login): Google/Naver 연동 시 authProvider/providerId 기반으로 계정 매핑하세요.
-        // LOCAL은 password 사용, 소셜 계정은 password 없이 providerId로 식별하면 됩니다.
-
-        // TODO(email-verification): 회원가입 시 검증 토큰을 생성해 메일 발송 큐에 넣고,
-        // 토큰 검증 API에서 member.emailVerified=true 처리하세요.
-        // 예시 흐름: VerificationToken(entity) 저장 -> 메일 발송 -> /verify?token=... 확인.
+        // TODO(feature-social-login): Google/Naver OAuth 로그인 연동 및 providerId 계정 매핑을 구현합니다.
+        // TODO(feature-email-verification): 이메일 인증 이력/정책(재시도 제한, 감사로그) 저장소를 외부 DB로 확장합니다.
 
         memberRepository.save(member);
 
-        return SignUpResponse.builder()
-                .memberId(member.getId())
-                .email(member.getEmail())
-                .build();
+        return new SignUpResponse(member.getId(), member.getEmail());
     }
 
+    private void validateRequiredTermsAgreement(SignUpRequest request) {
+        if (!Boolean.TRUE.equals(request.serviceTermsAgreed())
+                || !Boolean.TRUE.equals(request.privacyPolicyAgreed())
+                || !Boolean.TRUE.equals(request.ageOver14Agreed())) {
+            throw new BusinessException(ErrorCode.REQUIRED_TERMS_AGREEMENT);
+        }
+    }
+
+    /** 로컬 계정 인증 후 Access/Refresh 토큰을 발급합니다. */
     @Transactional
     public LoginResult login(LoginRequest request) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
-
-            UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+            UserPrincipal principal = authenticate(request.email(), request.password());
             Member member = memberRepository.findById(principal.memberId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.MEMBER_NOT_FOUND));
 
@@ -85,18 +83,10 @@ public class AuthService {
             refreshTokenRepository.findByMember(member)
                     .ifPresentOrElse(
                             existing -> existing.rotate(refreshToken, refreshExpiresAt),
-                            () -> refreshTokenRepository.save(RefreshToken.builder()
-                                    .member(member)
-                                    .token(refreshToken)
-                                    .expiresAt(refreshExpiresAt)
-                                    .build())
+                            () -> refreshTokenRepository.save(RefreshToken.issue(member, refreshToken, refreshExpiresAt))
                     );
 
-            AuthResponse response = AuthResponse.builder()
-                    .accessToken(accessToken)
-                    .tokenType("Bearer")
-                    .needsProfileSetup(!member.isProfileSetupCompleted())
-                    .build();
+            AuthResponse response = new AuthResponse(accessToken, "Bearer", !member.isProfileSetupCompleted());
 
             return new LoginResult(response, refreshToken, jwtProperties.refreshTokenValiditySeconds());
         } catch (BadCredentialsException e) {
@@ -104,6 +94,7 @@ public class AuthService {
         }
     }
 
+    /** Refresh 토큰을 검증하고 Access/Refresh 토큰을 재발급합니다. */
     @Transactional
     public LoginResult refresh(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
@@ -138,15 +129,12 @@ public class AuthService {
 
         storedToken.rotate(newRefreshToken, refreshExpiresAt);
 
-        AuthResponse response = AuthResponse.builder()
-                .accessToken(newAccessToken)
-                .tokenType("Bearer")
-                .needsProfileSetup(!member.isProfileSetupCompleted())
-                .build();
+        AuthResponse response = new AuthResponse(newAccessToken, "Bearer", !member.isProfileSetupCompleted());
 
         return new LoginResult(response, newRefreshToken, jwtProperties.refreshTokenValiditySeconds());
     }
 
+    /** 현재 로그인 사용자의 Refresh 토큰을 폐기합니다. */
     @Transactional
     public void logout(Long memberId) {
         Member member = memberRepository.findById(memberId)
@@ -155,5 +143,13 @@ public class AuthService {
     }
 
     public record LoginResult(AuthResponse response, String refreshToken, long refreshTokenValiditySeconds) {
+    }
+
+    /** 이메일/비밀번호 기반 인증을 수행하고 인증 주체를 반환합니다. */
+    private UserPrincipal authenticate(String email, String password) {
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password)
+        );
+        return (UserPrincipal) authentication.getPrincipal();
     }
 }
