@@ -5,8 +5,11 @@ import com.example.tmta.auth.dto.EmailVerificationConfirmRequest;
 import com.example.tmta.auth.dto.EmailVerificationConfirmResponse;
 import com.example.tmta.auth.dto.EmailVerificationSendRequest;
 import com.example.tmta.auth.dto.LoginRequest;
+import com.example.tmta.auth.dto.PasswordResetResetRequest;
 import com.example.tmta.auth.dto.SignUpRequest;
 import com.example.tmta.auth.dto.SignUpResponse;
+import com.example.tmta.auth.dto.SocialLoginRequest;
+import com.example.tmta.auth.dto.WithdrawRequest;
 import com.example.tmta.common.exception.dto.ErrorResponse;
 import com.example.tmta.common.security.UserPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -150,6 +153,14 @@ public class AuthController {
         return ResponseEntity.ok(result.response());
     }
 
+    @PostMapping("/social/login")
+    public ResponseEntity<AuthResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request,
+                                                    HttpServletResponse response) {
+        AuthService.LoginResult result = authService.socialLogin(request);
+        attachRefreshCookie(response, result.refreshToken(), result.refreshTokenValiditySeconds());
+        return ResponseEntity.ok(result.response());
+    }
+
     @Operation(
             summary = "토큰 재발급",
             description = """
@@ -197,6 +208,34 @@ public class AuthController {
     public ResponseEntity<Void> logout(@AuthenticationPrincipal UserPrincipal principal,
                                        HttpServletResponse response) {
         authService.logout(principal.memberId());
+        clearRefreshCookie(response);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-reset/send")
+    public ResponseEntity<Void> sendPasswordResetCode(@Valid @RequestBody EmailVerificationSendRequest request) {
+        authService.sendPasswordResetCode(request.email());
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/password-reset/confirm")
+    public ResponseEntity<EmailVerificationConfirmResponse> confirmPasswordResetCode(
+            @Valid @RequestBody EmailVerificationConfirmRequest request
+    ) {
+        return ResponseEntity.ok(emailVerificationService.confirmPasswordResetCode(request));
+    }
+
+    @PostMapping("/password-reset/reset")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetResetRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal UserPrincipal principal,
+                                         @RequestBody(required = false) WithdrawRequest request,
+                                         HttpServletResponse response) {
+        authService.withdraw(principal.memberId(), request);
         clearRefreshCookie(response);
         return ResponseEntity.noContent().build();
     }

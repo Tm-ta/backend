@@ -12,4 +12,6 @@ public interface AvailableTimeRepository extends JpaRepository<AvailableTime, Lo
     void deleteAllByAppointmentDateAppointmentAndMemberId(Appointment appointment, Long memberId);
 
     void deleteAllByAppointmentDateAppointment(Appointment appointment);
+
+    void deleteAllByMemberId(Long memberId);
 }

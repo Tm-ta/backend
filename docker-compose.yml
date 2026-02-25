@@ -22,6 +22,11 @@ services:
       - SES_ENABLED=true
       - AWS_REGION=ap-northeast-2
       - SES_FROM_ADDRESS=hey.tmta@gmail.com
+      # Social login provider toggles (prod): enable Kakao only
+      - SOCIAL_GOOGLE_ENABLED=false
+      - SOCIAL_APPLE_ENABLED=false
+      - SOCIAL_KAKAO_ENABLED=true
+      - SOCIAL_NAVER_ENABLED=false
     networks:
       - tmta-network
 

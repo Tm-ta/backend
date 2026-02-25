@@ -113,6 +113,52 @@ public class EmailVerificationService {
         }
     }
 
+    /** 비밀번호 재설정용 인증번호를 발송합니다. */
+    public void sendPasswordResetCode(String email) {
+        sendVerificationCode(new com.example.tmta.auth.dto.EmailVerificationSendRequest(email));
+    }
+
+    /** 비밀번호 재설정용 인증번호를 검증하고 재설정 토큰을 발급합니다. */
+    public com.example.tmta.auth.dto.EmailVerificationConfirmResponse confirmPasswordResetCode(
+            com.example.tmta.auth.dto.EmailVerificationConfirmRequest request
+    ) {
+        String normalizedEmail = normalizeEmail(request.email());
+        EmailVerificationRecord record = emailVerificationStore.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new BusinessException(ErrorCode.EMAIL_VERIFICATION_REQUIRED));
+        Instant now = Instant.now();
+        if (record.isCodeExpired(now)) {
+            emailVerificationStore.clear(normalizedEmail);
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_EXPIRED);
+        }
+        if (record.isVerifyAttemptsExceeded(emailVerificationProperties.getMaxVerifyAttempts())) {
+            emailVerificationStore.clear(normalizedEmail);
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED);
+        }
+        if (!codeHasher.matches(request.code(), record.codeHash())) {
+            EmailVerificationRecord updated = record.incrementFailedAttempts();
+            if (updated.isVerifyAttemptsExceeded(emailVerificationProperties.getMaxVerifyAttempts())) {
+                emailVerificationStore.clear(normalizedEmail);
+                throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED);
+            }
+            emailVerificationStore.save(normalizedEmail, updated);
+            throw new BusinessException(ErrorCode.EMAIL_VERIFICATION_MISMATCH);
+        }
+        String token = emailVerificationTokenProvider.createPasswordResetToken(
+                normalizedEmail,
+                java.time.Duration.ofSeconds(emailVerificationProperties.getVerificationTokenTtlSeconds())
+        );
+        emailVerificationStore.clear(normalizedEmail);
+        return new com.example.tmta.auth.dto.EmailVerificationConfirmResponse(true, token);
+    }
+
+    public void assertEmailVerifiedForPasswordReset(String email, String resetToken) {
+        String normalizedEmail = normalizeEmail(email);
+        String verifiedEmail = normalizeEmail(emailVerificationTokenProvider.getPasswordResetEmail(resetToken));
+        if (!normalizedEmail.equals(verifiedEmail)) {
+            throw new BusinessException(ErrorCode.PASSWORD_RESET_TOKEN_INVALID);
+        }
+    }
+
     /** 이메일 문자열을 트림/소문자 정규화합니다. */
     private String normalizeEmail(String email) {
         if (email == null || email.isBlank()) {

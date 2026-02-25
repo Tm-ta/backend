@@ -23,3 +23,15 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+
+tmta:
+  auth:
+    social:
+      google:
+        enabled: ${SOCIAL_GOOGLE_ENABLED:false}
+      apple:
+        enabled: ${SOCIAL_APPLE_ENABLED:false}
+      kakao:
+        enabled: ${SOCIAL_KAKAO_ENABLED:false}
+      naver:
+        enabled: ${SOCIAL_NAVER_ENABLED:false}

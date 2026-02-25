@@ -30,6 +30,11 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_RESEND_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "M011", "인증번호 재요청은 잠시 후 다시 시도해주세요."),
     EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "M012", "인증번호 요청 횟수를 초과했습니다."),
     EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "M013", "인증번호 입력 시도 횟수를 초과했습니다."),
+    SOCIAL_LOGIN_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "M014", "유효하지 않은 소셜 로그인 토큰입니다."),
+    SOCIAL_ACCOUNT_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "M015", "소셜 계정 이메일 정보를 확인할 수 없습니다."),
+    SOCIAL_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "M016", "지원하지 않는 소셜 로그인 제공자입니다."),
+    ACCOUNT_PROVIDER_MISMATCH(HttpStatus.CONFLICT, "M017", "동일 이메일로 다른 로그인 방식의 계정이 이미 존재합니다."),
+    PASSWORD_RESET_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "M018", "비밀번호 재설정을 사용할 수 없는 계정입니다."),
 
     // Appointment
     APPOINTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "해당 약속을 찾을 수 없습니다."),
@@ -48,7 +53,8 @@ public enum ErrorCode {
     CANNOT_KICK_LEADER(HttpStatus.BAD_REQUEST, "T008", "팀장은 강퇴할 수 없습니다."),
 
     // Auth
-    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AU001", "유효하지 않은 리프레시 토큰입니다.");
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AU001", "유효하지 않은 리프레시 토큰입니다."),
+    PASSWORD_RESET_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AU002", "유효하지 않은 비밀번호 재설정 토큰입니다.");
 
     private final HttpStatus status;
     private final String code;
