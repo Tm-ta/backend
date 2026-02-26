@@ -19,6 +19,7 @@ public enum ErrorCode {
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "C008", "지원하지 않는 Content-Type 입니다."),
     NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "C009", "지원하지 않는 응답 형식입니다."),
     DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT, "C010", "데이터 제약 조건 위반입니다."),
+    EMAIL_SEND_REJECTED(HttpStatus.BAD_REQUEST, "C011", "이메일 발송이 거부되었습니다."),
 
     // Member
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 회원을 찾을 수 없습니다."),

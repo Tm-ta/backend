@@ -3,7 +3,10 @@ package com.example.tmta.auth.verification;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
+import com.example.tmta.common.exception.BusinessException;
+import com.example.tmta.common.exception.ErrorCode;
 import software.amazon.awssdk.services.sesv2.SesV2Client;
+import software.amazon.awssdk.services.sesv2.model.MessageRejectedException;
 import software.amazon.awssdk.services.sesv2.model.Body;
 import software.amazon.awssdk.services.sesv2.model.Content;
 import software.amazon.awssdk.services.sesv2.model.Destination;
@@ -46,6 +49,10 @@ public class SesEmailVerificationSender implements EmailVerificationSender {
                         .build())
                 .build();
 
-        sesV2Client.sendEmail(request);
+        try {
+            sesV2Client.sendEmail(request);
+        } catch (MessageRejectedException e) {
+            throw new BusinessException(ErrorCode.EMAIL_SEND_REJECTED);
+        }
     }
 }

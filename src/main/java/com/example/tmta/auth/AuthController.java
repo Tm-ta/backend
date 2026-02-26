@@ -55,11 +55,14 @@ public class AuthController {
 - `INVALID_INPUT_VALUE (C001, 400)` : 이메일이 null/blank 이거나 DTO 검증에 실패한 경우.
 - `EMAIL_VERIFICATION_RESEND_COOLDOWN (M011, 429)` : 재전송 쿨다운 시간 미충족.
 - `EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED (M012, 429)` : 일정 시간 내 발송 횟수 초과.
+- `EMAIL_SEND_REJECTED (C011, 400)` : SES 정책에 의해 이메일 발송이 거부됨.
                     """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "발송 성공"),
             @ApiResponse(responseCode = "400", description = "`INVALID_INPUT_VALUE (C001)`",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "`EMAIL_SEND_REJECTED (C011)`",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "429", description = "`EMAIL_VERIFICATION_RESEND_COOLDOWN (M011)`, `EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED (M012)`",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
@@ -258,11 +261,14 @@ public class AuthController {
 - `PASSWORD_RESET_NOT_ALLOWED (M018, 400)` : LOCAL 계정이 아닌 경우.
 - `EMAIL_VERIFICATION_RESEND_COOLDOWN (M011, 429)` : 재전송 쿨다운 시간 미충족.
 - `EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED (M012, 429)` : 일정 시간 내 발송 횟수 초과.
+- `EMAIL_SEND_REJECTED (C011, 400)` : SES 정책에 의해 이메일 발송이 거부됨.
                     """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "발송 성공"),
             @ApiResponse(responseCode = "400", description = "입력/계정 상태 오류 (C001, M018)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "400", description = "이메일 발송 거부 (C011)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "404", description = "회원 없음 (M001)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
