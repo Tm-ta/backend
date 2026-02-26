@@ -35,3 +35,21 @@ tmta:
         enabled: ${SOCIAL_KAKAO_ENABLED:false}
       naver:
         enabled: ${SOCIAL_NAVER_ENABLED:false}
+
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
