@@ -45,7 +45,7 @@ public class SwaggerConfig {
                                 .url("http://localhost:8080")
                                 .description("Local"),
                         new Server()
-                                .url("http://43.203.155.196:8080")
+                                .url("https://api.tm-ta.com")
                                 .description("Production")
                 ))
                 .info(apiInfo());
