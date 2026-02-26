@@ -13,7 +13,7 @@ tmta:
   email:
     verification:
       code-length: 6
-      code-ttl-seconds: 300
+      code-ttl-seconds: 180
       verification-token-ttl-seconds: 1800
       resend-cooldown-seconds: 60
       rate-limit-window-seconds: 3600
