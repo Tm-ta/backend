@@ -15,6 +15,10 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "C004", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "C005", "접근 권한이 없습니다."),
     TERMS_NOT_FOUND(HttpStatus.NOT_FOUND, "C006", "해당 약관을 찾을 수 없습니다."),
+    ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "C007", "요청한 리소스를 찾을 수 없습니다."),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "C008", "지원하지 않는 Content-Type 입니다."),
+    NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "C009", "지원하지 않는 응답 형식입니다."),
+    DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT, "C010", "데이터 제약 조건 위반입니다."),
 
     // Member
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 회원을 찾을 수 없습니다."),

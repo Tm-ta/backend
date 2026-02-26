@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth", description = "인증/인가 관련 API")
 public class AuthController {
 
     private static final String REFRESH_COOKIE_NAME = "refresh_token";
@@ -46,16 +48,20 @@ public class AuthController {
 - 이메일은 trim + 소문자로 정규화되어 처리됩니다.
 - **동일 이메일로 재요청 시 가장 마지막으로 저장된 인증번호만 유효합니다.**
 - **인증번호 유효시간은 5분입니다.**
-- 현재 구현의 인증번호는 고정값(1111)입니다.
+- 인증번호는 난수로 생성되며, 저장 시 해시로 보관됩니다.
 - 현재 구현은 가입된 이메일 중복 여부를 검사하지 않습니다.
 
 ### 예외상황 / 에러코드
 - `INVALID_INPUT_VALUE (C001, 400)` : 이메일이 null/blank 이거나 DTO 검증에 실패한 경우.
+- `EMAIL_VERIFICATION_RESEND_COOLDOWN (M011, 429)` : 재전송 쿨다운 시간 미충족.
+- `EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED (M012, 429)` : 일정 시간 내 발송 횟수 초과.
                     """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "204", description = "발송 성공"),
             @ApiResponse(responseCode = "400", description = "`INVALID_INPUT_VALUE (C001)`",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "429", description = "`EMAIL_VERIFICATION_RESEND_COOLDOWN (M011)`, `EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED (M012)`",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/email-verification/send")
@@ -78,11 +84,14 @@ public class AuthController {
 - `EMAIL_VERIFICATION_REQUIRED (M006, 400)` : 발송 이력이 없거나 이메일이 불일치.
 - `EMAIL_VERIFICATION_MISMATCH (M007, 400)` : 인증번호 불일치.
 - `EMAIL_VERIFICATION_EXPIRED (M008, 400)` : 인증번호 만료.
+- `EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED (M013, 429)` : 인증번호 입력 시도 횟수 초과.
                     """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "인증 성공"),
             @ApiResponse(responseCode = "400", description = "입력/인증 오류 (C001, M006, M007, M008)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "429", description = "인증번호 입력 시도 횟수 초과 (M013)",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping("/email-verification/confirm")
@@ -153,6 +162,30 @@ public class AuthController {
         return ResponseEntity.ok(result.response());
     }
 
+    @Operation(
+            summary = "소셜 로그인",
+            description = """
+### 제약조건
+- 지원되는 provider(GOOGLE/APPLE/KAKAO/NAVER)만 허용됩니다.
+- provider에 맞는 토큰/사용자 정보 검증이 필요합니다.
+
+### 예외상황 / 에러코드
+- `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 검증 실패.
+- `SOCIAL_PROVIDER_NOT_SUPPORTED (M016, 400)` : 지원하지 않는 provider.
+- `SOCIAL_ACCOUNT_EMAIL_REQUIRED (M015, 400)` : 소셜 계정 이메일 정보 조회 실패.
+- `SOCIAL_LOGIN_TOKEN_INVALID (M014, 401)` : 소셜 로그인 토큰 검증 실패.
+- `ACCOUNT_PROVIDER_MISMATCH (M017, 409)` : 동일 이메일로 다른 로그인 방식 계정 존재.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "입력/지원하지 않는 provider/이메일 미확인 (C001, M016, M015)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 소셜 로그인 토큰 (M014)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "계정 로그인 방식 충돌 (M017)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/social/login")
     public ResponseEntity<AuthResponse> socialLogin(@Valid @RequestBody SocialLoginRequest request,
                                                     HttpServletResponse response) {
@@ -212,12 +245,58 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+            summary = "비밀번호 재설정 인증번호 발송",
+            description = """
+### 제약조건
+- LOCAL 계정만 비밀번호 재설정이 가능합니다.
+- 이메일은 trim + 소문자로 정규화되어 처리됩니다.
+
+### 예외상황 / 에러코드
+- `INVALID_INPUT_VALUE (C001, 400)` : 이메일 형식 또는 필수값 오류.
+- `MEMBER_NOT_FOUND (M001, 404)` : 회원 조회 실패.
+- `PASSWORD_RESET_NOT_ALLOWED (M018, 400)` : LOCAL 계정이 아닌 경우.
+- `EMAIL_VERIFICATION_RESEND_COOLDOWN (M011, 429)` : 재전송 쿨다운 시간 미충족.
+- `EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED (M012, 429)` : 일정 시간 내 발송 횟수 초과.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "발송 성공"),
+            @ApiResponse(responseCode = "400", description = "입력/계정 상태 오류 (C001, M018)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "회원 없음 (M001)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "429", description = "재전송 제한/발송 횟수 제한 (M011, M012)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/password-reset/send")
     public ResponseEntity<Void> sendPasswordResetCode(@Valid @RequestBody EmailVerificationSendRequest request) {
         authService.sendPasswordResetCode(request.email());
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+            summary = "비밀번호 재설정 인증번호 확인",
+            description = """
+### 제약조건
+- 발송 이력이 없는 이메일은 인증할 수 없습니다.
+- 인증번호 유효시간 내의 코드만 검증 가능합니다.
+
+### 예외상황 / 에러코드
+- `INVALID_INPUT_VALUE (C001, 400)` : 이메일/인증번호 형식 또는 필수값 오류.
+- `EMAIL_VERIFICATION_REQUIRED (M006, 400)` : 발송 이력이 없거나 이메일이 불일치.
+- `EMAIL_VERIFICATION_MISMATCH (M007, 400)` : 인증번호 불일치.
+- `EMAIL_VERIFICATION_EXPIRED (M008, 400)` : 인증번호 만료.
+- `EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED (M013, 429)` : 인증번호 입력 시도 횟수 초과.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증 성공"),
+            @ApiResponse(responseCode = "400", description = "입력/인증 오류 (C001, M006, M007, M008)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "429", description = "인증번호 입력 시도 횟수 초과 (M013)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/password-reset/confirm")
     public ResponseEntity<EmailVerificationConfirmResponse> confirmPasswordResetCode(
             @Valid @RequestBody EmailVerificationConfirmRequest request
@@ -225,12 +304,55 @@ public class AuthController {
         return ResponseEntity.ok(emailVerificationService.confirmPasswordResetCode(request));
     }
 
+    @Operation(
+            summary = "비밀번호 재설정 완료",
+            description = """
+### 제약조건
+- resetToken은 비밀번호 재설정 인증을 통해 발급된 토큰이어야 합니다.
+- LOCAL 계정만 비밀번호 재설정이 가능합니다.
+
+### 예외상황 / 에러코드
+- `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 검증 실패(비밀번호 정책 위반 등).
+- `PASSWORD_RESET_TOKEN_INVALID (AU002, 401)` : 유효하지 않은 재설정 토큰.
+- `MEMBER_NOT_FOUND (M001, 404)` : 회원 조회 실패.
+- `PASSWORD_RESET_NOT_ALLOWED (M018, 400)` : LOCAL 계정이 아닌 경우.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "재설정 성공"),
+            @ApiResponse(responseCode = "400", description = "입력/계정 상태 오류 (C001, M018)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 재설정 토큰 (AU002)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "회원 없음 (M001)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/password-reset/reset")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody PasswordResetResetRequest request) {
         authService.resetPassword(request);
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(
+            summary = "회원 탈퇴",
+            description = """
+### 제약조건
+- **인증된 사용자만 호출할 수 있습니다.**
+- LOCAL 계정은 비밀번호 검증이 필요합니다. (social 계정은 비밀번호 미검증)
+
+### 예외상황 / 에러코드
+- `UNAUTHORIZED (C004, 401)` : 인증되지 않은 요청.
+- `INVALID_CREDENTIALS (M003, 401)` : 비밀번호 불일치 또는 누락.
+- `MEMBER_NOT_FOUND (M001, 404)` : 회원 조회 실패.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "204", description = "탈퇴 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 필요/비밀번호 불일치 (C004, M003)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "회원 없음 (M001)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
     @PostMapping("/withdraw")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal UserPrincipal principal,
                                          @RequestBody(required = false) WithdrawRequest request,
