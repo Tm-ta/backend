@@ -44,7 +44,23 @@ public class Member extends BaseEntity{
                 .password(encodedPassword)
                 .authProvider(AuthProvider.LOCAL)
                 .role(MemberRole.GENERAL)
-                .emailVerified(false)
+                .emailVerified(true)
+                .profileSetupCompleted(false)
+                .pushAlarmAgree(marketingAgreed)
+                .build();
+    }
+
+    public static Member registerSocial(String email,
+                                        AuthProvider authProvider,
+                                        String providerId,
+                                        boolean marketingAgreed) {
+        return Member.builder()
+                .email(email)
+                .password(null)
+                .authProvider(authProvider)
+                .providerId(providerId)
+                .role(MemberRole.GENERAL)
+                .emailVerified(true)
                 .profileSetupCompleted(false)
                 .pushAlarmAgree(marketingAgreed)
                 .build();
@@ -54,5 +70,9 @@ public class Member extends BaseEntity{
         this.nickName = nickName;
         this.profileImage = profileImage;
         this.profileSetupCompleted = true;
+    }
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 }

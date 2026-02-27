@@ -7,14 +7,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     ports:
       - "8080:8080"
+      - "8081:8081"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       # IMPORTANT: Ensure these credentials match the ones for the 'db' service below.
       - DB_URL=jdbc:mysql://db:3306/tmta?serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
       - DB_USERNAME=user
       - DB_PASSWORD=password # Replace with a strong password in production
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SES_ENABLED=true
+      - AWS_REGION=ap-northeast-2
+      - SES_FROM_ADDRESS=hey.tmta@gmail.com
+      # Social login provider toggles (prod): enable Kakao only
+      - SOCIAL_GOOGLE_ENABLED=false
+      - SOCIAL_APPLE_ENABLED=false
+      - SOCIAL_KAKAO_ENABLED=true
+      - SOCIAL_NAVER_ENABLED=false
     networks:
       - tmta-network
 
@@ -39,9 +52,26 @@ services:
     networks:
       - tmta-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: tmta-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tmta-network
+
 networks:
   tmta-network:
     driver: bridge
 
 volumes:
   mysql-data:
+  redis-data:

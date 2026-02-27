@@ -1,5 +1,6 @@
 package com.example.tmta.auth.verification;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -8,13 +9,14 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
+@Profile({"dev", "test"})
 public class InMemoryEmailVerificationStore implements EmailVerificationStore {
 
     private final Map<String, EmailVerificationRecord> storage = new ConcurrentHashMap<>();
 
     @Override
-    public void saveCode(String email, String code, Instant codeExpiresAt) {
-        storage.put(email, new EmailVerificationRecord(code, codeExpiresAt));
+    public void save(String email, EmailVerificationRecord record) {
+        storage.put(email, record);
     }
 
     @Override

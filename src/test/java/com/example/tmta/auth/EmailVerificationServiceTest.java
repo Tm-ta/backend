@@ -2,6 +2,9 @@ package com.example.tmta.auth;
 
 import com.example.tmta.auth.dto.EmailVerificationConfirmRequest;
 import com.example.tmta.auth.dto.EmailVerificationSendRequest;
+import com.example.tmta.auth.verification.EmailVerificationCodeGenerator;
+import com.example.tmta.auth.verification.EmailVerificationCodeHasher;
+import com.example.tmta.auth.verification.EmailVerificationProperties;
 import com.example.tmta.auth.verification.EmailVerificationRecord;
 import com.example.tmta.auth.verification.EmailVerificationSender;
 import com.example.tmta.auth.verification.EmailVerificationStore;
@@ -23,6 +26,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,9 +42,30 @@ class EmailVerificationServiceTest {
     private EmailVerificationSender emailVerificationSender;
     @Mock
     private EmailVerificationTokenProvider emailVerificationTokenProvider;
+    @Mock
+    private EmailVerificationProperties emailVerificationProperties;
+    @Mock
+    private EmailVerificationCodeGenerator codeGenerator;
+    @Mock
+    private EmailVerificationCodeHasher codeHasher;
 
     @InjectMocks
     private EmailVerificationService emailVerificationService;
+
+    private void stubDefaultVerificationProperties() {
+        lenient().when(emailVerificationProperties.getCodeLength()).thenReturn(6);
+        lenient().when(emailVerificationProperties.getCodeTtlSeconds()).thenReturn(300L);
+        lenient().when(emailVerificationProperties.getVerificationTokenTtlSeconds()).thenReturn(1800L);
+        lenient().when(emailVerificationProperties.getResendCooldownSeconds()).thenReturn(60L);
+        lenient().when(emailVerificationProperties.getRateLimitWindowSeconds()).thenReturn(3600L);
+        lenient().when(emailVerificationProperties.getMaxSendsPerWindow()).thenReturn(5);
+        lenient().when(emailVerificationProperties.getMaxVerifyAttempts()).thenReturn(5);
+    }
+
+    private EmailVerificationRecord activeRecord(String hash) {
+        Instant now = Instant.now();
+        return new EmailVerificationRecord(hash, now.plusSeconds(300), 0, 1, now.minusSeconds(60), now.minusSeconds(30));
+    }
 
     @Nested
     @DisplayName("sendVerificationCode")
@@ -48,19 +75,42 @@ class EmailVerificationServiceTest {
         @DisplayName("이메일 정규화 후 코드 저장 및 발송")
         void sendCodeSuccess() {
             Instant before = Instant.now();
+            stubDefaultVerificationProperties();
+            when(emailVerificationStore.findByEmail("user@test.com")).thenReturn(Optional.empty());
+            when(codeGenerator.generateNumericCode(6)).thenReturn("123456");
+            when(codeHasher.hash("123456")).thenReturn("hashed-code");
 
             emailVerificationService.sendVerificationCode(new EmailVerificationSendRequest(" User@Test.com "));
 
             ArgumentCaptor<String> emailCaptor = ArgumentCaptor.forClass(String.class);
-            ArgumentCaptor<String> codeCaptor = ArgumentCaptor.forClass(String.class);
-            ArgumentCaptor<Instant> expiresAtCaptor = ArgumentCaptor.forClass(Instant.class);
-            verify(emailVerificationStore).saveCode(emailCaptor.capture(), codeCaptor.capture(), expiresAtCaptor.capture());
+            ArgumentCaptor<EmailVerificationRecord> recordCaptor = ArgumentCaptor.forClass(EmailVerificationRecord.class);
+            verify(emailVerificationStore).save(emailCaptor.capture(), recordCaptor.capture());
 
             assertThat(emailCaptor.getValue()).isEqualTo("user@test.com");
-            assertThat(codeCaptor.getValue()).isEqualTo("1111");
-            assertThat(expiresAtCaptor.getValue()).isAfter(before.plus(Duration.ofMinutes(4)));
-            assertThat(expiresAtCaptor.getValue()).isBefore(before.plus(Duration.ofMinutes(6)));
-            verify(emailVerificationSender).sendVerificationCode("user@test.com", "1111");
+            assertThat(recordCaptor.getValue().codeHash()).isEqualTo("hashed-code");
+            assertThat(recordCaptor.getValue().codeExpiresAt()).isAfter(before.plus(Duration.ofMinutes(4)));
+            assertThat(recordCaptor.getValue().codeExpiresAt()).isBefore(before.plus(Duration.ofMinutes(6)));
+            assertThat(recordCaptor.getValue().failedAttempts()).isZero();
+            assertThat(recordCaptor.getValue().sendCount()).isEqualTo(1);
+            verify(emailVerificationSender).sendVerificationCode("user@test.com", "123456");
+        }
+
+        @Test
+        @DisplayName("쿨다운 내 재요청이면 EMAIL_VERIFICATION_RESEND_COOLDOWN 예외")
+        void resendCooldown() {
+            stubDefaultVerificationProperties();
+            Instant now = Instant.now();
+            when(emailVerificationStore.findByEmail("user@test.com"))
+                    .thenReturn(Optional.of(new EmailVerificationRecord(
+                            "hashed", now.plusSeconds(300), 0, 1, now.minusSeconds(10), now.minusSeconds(10)
+                    )));
+
+            assertThatThrownBy(() -> emailVerificationService.sendVerificationCode(new EmailVerificationSendRequest("user@test.com")))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.EMAIL_VERIFICATION_RESEND_COOLDOWN);
+
+            verify(emailVerificationSender, never()).sendVerificationCode(any(), any());
         }
 
         @Test
@@ -80,6 +130,7 @@ class EmailVerificationServiceTest {
         @Test
         @DisplayName("저장된 인증정보가 없으면 EMAIL_VERIFICATION_REQUIRED 예외")
         void missingRecord() {
+            stubDefaultVerificationProperties();
             when(emailVerificationStore.findByEmail("user@test.com")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> emailVerificationService.confirmVerificationCode(
@@ -93,8 +144,12 @@ class EmailVerificationServiceTest {
         @Test
         @DisplayName("인증코드가 만료되면 저장소에서 제거하고 EMAIL_VERIFICATION_EXPIRED 예외")
         void expiredCode() {
+            stubDefaultVerificationProperties();
+            Instant now = Instant.now();
             when(emailVerificationStore.findByEmail("user@test.com"))
-                    .thenReturn(Optional.of(new EmailVerificationRecord("1111", Instant.now().minusSeconds(1))));
+                    .thenReturn(Optional.of(new EmailVerificationRecord(
+                            "hashed", now.minusSeconds(1), 0, 1, now.minusSeconds(60), now.minusSeconds(30)
+                    )));
 
             assertThatThrownBy(() -> emailVerificationService.confirmVerificationCode(
                     new EmailVerificationConfirmRequest("user@test.com", "1111")
@@ -109,8 +164,10 @@ class EmailVerificationServiceTest {
         @Test
         @DisplayName("인증코드가 다르면 EMAIL_VERIFICATION_MISMATCH 예외")
         void mismatchCode() {
+            stubDefaultVerificationProperties();
             when(emailVerificationStore.findByEmail("user@test.com"))
-                    .thenReturn(Optional.of(new EmailVerificationRecord("1111", Instant.now().plusSeconds(300))));
+                    .thenReturn(Optional.of(activeRecord("hashed")));
+            when(codeHasher.matches("9999", "hashed")).thenReturn(false);
 
             assertThatThrownBy(() -> emailVerificationService.confirmVerificationCode(
                     new EmailVerificationConfirmRequest("user@test.com", "9999")
@@ -120,13 +177,35 @@ class EmailVerificationServiceTest {
                     .isEqualTo(ErrorCode.EMAIL_VERIFICATION_MISMATCH);
 
             verify(emailVerificationStore, never()).clear("user@test.com");
+            verify(emailVerificationStore).save(eq("user@test.com"), any(EmailVerificationRecord.class));
+        }
+
+        @Test
+        @DisplayName("실패 횟수 초과 시 EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED 예외")
+        void attemptLimitExceeded() {
+            stubDefaultVerificationProperties();
+            Instant now = Instant.now();
+            when(emailVerificationStore.findByEmail("user@test.com"))
+                    .thenReturn(Optional.of(new EmailVerificationRecord(
+                            "hashed", now.plusSeconds(300), 5, 1, now.minusSeconds(60), now.minusSeconds(30)
+                    )));
+
+            assertThatThrownBy(() -> emailVerificationService.confirmVerificationCode(
+                    new EmailVerificationConfirmRequest("user@test.com", "1111")
+            ))
+                    .isInstanceOf(BusinessException.class)
+                    .extracting(e -> ((BusinessException) e).getErrorCode())
+                    .isEqualTo(ErrorCode.EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED);
+
+            verify(emailVerificationStore).clear("user@test.com");
         }
 
         @Test
         @DisplayName("코드 검증 성공 시 회원가입용 토큰 발급")
         void confirmSuccess() {
-            when(emailVerificationStore.findByEmail("user@test.com"))
-                    .thenReturn(Optional.of(new EmailVerificationRecord("1111", Instant.now().plusSeconds(300))));
+            stubDefaultVerificationProperties();
+            when(emailVerificationStore.findByEmail("user@test.com")).thenReturn(Optional.of(activeRecord("hashed")));
+            when(codeHasher.matches("1111", "hashed")).thenReturn(true);
             when(emailVerificationTokenProvider.createToken("user@test.com", Duration.ofMinutes(30)))
                     .thenReturn("verification-token");
 

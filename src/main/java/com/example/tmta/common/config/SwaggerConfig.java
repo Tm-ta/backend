@@ -12,6 +12,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
 import io.swagger.v3.oas.models.Operation;
 import io.swagger.v3.oas.models.responses.ApiResponse;
+import io.swagger.v3.oas.models.media.MediaType;
 import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -45,7 +46,7 @@ public class SwaggerConfig {
                                 .url("http://localhost:8080")
                                 .description("Local"),
                         new Server()
-                                .url("http://43.203.155.196:8080")
+                                .url("https://api.tm-ta.com")
                                 .description("Production")
                 ))
                 .info(apiInfo());
@@ -113,6 +114,29 @@ public class SwaggerConfig {
         };
     }
 
+    @Bean
+    public OpenApiCustomizer commonErrorResponsesCustomizer() {
+        return openApi -> {
+            if (openApi.getPaths() == null) {
+                return;
+            }
+
+            openApi.getPaths().values().forEach(pathItem -> {
+                if (pathItem == null || pathItem.readOperations() == null) {
+                    return;
+                }
+                for (Operation operation : pathItem.readOperations()) {
+                    if (operation.getResponses() == null) {
+                        continue;
+                    }
+                    addErrorResponseIfAbsent(operation, "405", "지원하지 않는 메서드입니다. (C002)");
+                    addErrorResponseIfAbsent(operation, "415", "지원하지 않는 Content-Type 입니다. (C008)");
+                    addErrorResponseIfAbsent(operation, "406", "지원하지 않는 응답 형식입니다. (C009)");
+                }
+            });
+        };
+    }
+
     private static boolean isErrorResponseSchema(io.swagger.v3.oas.models.media.MediaType mediaType) {
         if (mediaType == null || mediaType.getSchema() == null) {
             return false;
@@ -144,6 +168,26 @@ public class SwaggerConfig {
             codes.add(matcher.group());
         }
         return codes;
+    }
+
+    private static void addErrorResponseIfAbsent(Operation operation, String statusCode, String description) {
+        if (operation.getResponses().containsKey(statusCode)) {
+            return;
+        }
+
+        ApiResponse response = new ApiResponse();
+        response.setDescription(description);
+
+        MediaType mediaType = new MediaType();
+        Schema<?> schema = new Schema<>();
+        schema.set$ref(ERROR_RESPONSE_REF);
+        mediaType.setSchema(schema);
+
+        Content content = new Content();
+        content.addMediaType("application/json", mediaType);
+        response.setContent(content);
+
+        operation.getResponses().addApiResponse(statusCode, response);
     }
 
     private Info apiInfo() {

@@ -1,0 +1,23 @@
+aws_region      = "ap-northeast-2"
+hosted_zone_id  = "ZXXXXXXXXXXXXX"
+api_domain_name = "api.tm-ta.com"
+
+# Spring Boot (example)
+# app_port        = 8080
+# management_port = 8081
+# health_check_path = "/actuator/health/readiness"
+# auto_allow_current_public_ip_for_ssh = true
+# allow_ec2_instance_connect = true # AWS Console "EC2 Instance Connect" 사용 시 권장
+
+# Optional SSH access
+# key_name = "your-keypair-name" # SSH 접속하려면 EC2 Key Pair 이름이 필요합니다.
+# allowed_ssh_cidrs = ["YOUR_PUBLIC_IP/32"]
+
+# Optional system tuning
+# swap_size_gb = 4
+
+# Optional tags
+tags = {
+  Environment = "prod"
+  Owner       = "backend"
+}

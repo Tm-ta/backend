@@ -19,3 +19,37 @@ spring:
       ddl-auto: update
     # 성능을 위해 운영 환경에서는 SQL 로그를 출력하지 않습니다.
     show-sql: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+tmta:
+  auth:
+    social:
+      google:
+        enabled: ${SOCIAL_GOOGLE_ENABLED:false}
+      apple:
+        enabled: ${SOCIAL_APPLE_ENABLED:false}
+      kakao:
+        enabled: ${SOCIAL_KAKAO_ENABLED:false}
+      naver:
+        enabled: ${SOCIAL_NAVER_ENABLED:false}
+
+management:
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true

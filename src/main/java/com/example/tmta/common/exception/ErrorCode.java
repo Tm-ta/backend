@@ -15,6 +15,11 @@ public enum ErrorCode {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "C004", "인증이 필요합니다."),
     FORBIDDEN(HttpStatus.FORBIDDEN, "C005", "접근 권한이 없습니다."),
     TERMS_NOT_FOUND(HttpStatus.NOT_FOUND, "C006", "해당 약관을 찾을 수 없습니다."),
+    ENDPOINT_NOT_FOUND(HttpStatus.NOT_FOUND, "C007", "요청한 리소스를 찾을 수 없습니다."),
+    UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "C008", "지원하지 않는 Content-Type 입니다."),
+    NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "C009", "지원하지 않는 응답 형식입니다."),
+    DATA_INTEGRITY_VIOLATION(HttpStatus.CONFLICT, "C010", "데이터 제약 조건 위반입니다."),
+    EMAIL_SEND_REJECTED(HttpStatus.BAD_REQUEST, "C011", "이메일 발송이 거부되었습니다."),
 
     // Member
     MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "M001", "해당 회원을 찾을 수 없습니다."),
@@ -27,6 +32,14 @@ public enum ErrorCode {
     EMAIL_VERIFICATION_EXPIRED(HttpStatus.BAD_REQUEST, "M008", "인증번호가 만료되었습니다."),
     EMAIL_VERIFICATION_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "M009", "유효하지 않은 이메일 인증 토큰입니다."),
     REQUIRED_TERMS_AGREEMENT(HttpStatus.BAD_REQUEST, "M010", "필수 약관 동의가 필요합니다."),
+    EMAIL_VERIFICATION_RESEND_COOLDOWN(HttpStatus.TOO_MANY_REQUESTS, "M011", "인증번호 재요청은 잠시 후 다시 시도해주세요."),
+    EMAIL_VERIFICATION_SEND_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "M012", "인증번호 요청 횟수를 초과했습니다."),
+    EMAIL_VERIFICATION_ATTEMPT_LIMIT_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "M013", "인증번호 입력 시도 횟수를 초과했습니다."),
+    SOCIAL_LOGIN_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "M014", "유효하지 않은 소셜 로그인 토큰입니다."),
+    SOCIAL_ACCOUNT_EMAIL_REQUIRED(HttpStatus.BAD_REQUEST, "M015", "소셜 계정 이메일 정보를 확인할 수 없습니다."),
+    SOCIAL_PROVIDER_NOT_SUPPORTED(HttpStatus.BAD_REQUEST, "M016", "지원하지 않는 소셜 로그인 제공자입니다."),
+    ACCOUNT_PROVIDER_MISMATCH(HttpStatus.CONFLICT, "M017", "동일 이메일로 다른 로그인 방식의 계정이 이미 존재합니다."),
+    PASSWORD_RESET_NOT_ALLOWED(HttpStatus.BAD_REQUEST, "M018", "비밀번호 재설정을 사용할 수 없는 계정입니다."),
 
     // Appointment
     APPOINTMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "해당 약속을 찾을 수 없습니다."),
@@ -45,7 +58,8 @@ public enum ErrorCode {
     CANNOT_KICK_LEADER(HttpStatus.BAD_REQUEST, "T008", "팀장은 강퇴할 수 없습니다."),
 
     // Auth
-    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AU001", "유효하지 않은 리프레시 토큰입니다.");
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "AU001", "유효하지 않은 리프레시 토큰입니다."),
+    PASSWORD_RESET_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "AU002", "유효하지 않은 비밀번호 재설정 토큰입니다.");
 
     private final HttpStatus status;
     private final String code;

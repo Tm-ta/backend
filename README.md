@@ -26,6 +26,10 @@ src/main/java/com/example/tmta
 └── common           # 공통 인프라/횡단관심사 (security/exception/config/common dto/entity)
 ```
 
+### 2.2 추가 문서
+
+- 아키텍처/API 흐름/ERD/상태 전이 문서: `docs/ARCHITECTURE.md`
+
 ### 2.1 구조 원칙
 
 - 도메인 단위 패키지(`appointment`, `team`, `auth` ...)를 최상위에 둡니다.
@@ -141,24 +145,43 @@ docker compose up -d --build
 ./gradlew test
 ```
 
-현재 기본 테스트는 Spring Context 로딩 테스트 중심입니다.
+다음과 같은 단위 테스트가 포함되어 있습니다.
+
+- `AuthServiceTest`
+- `EmailVerificationServiceTest`
+- `AppointmentServiceTest`
+- `AppointmentCommandPolicyTest`
+- `AppointmentSlotCalculatorTest`
+- `TeamServiceTest`
+- `EmailVerificationTokenProviderTest`
+- `TmtaApplicationTests` (컨텍스트 로딩)
 
 ## 9. 개발 메모
 
 - `dev` 프로파일에서 `DataLoader`가 샘플 데이터를 주입합니다.
-- 이메일 인증/약관 저장소는 현재 인메모리/코드 하드코딩 기반 구현이 포함되어 있습니다.
+- 이메일 인증 저장소는 `dev/test`에서 인메모리, `prod`에서 Redis 구현을 사용합니다.
+- 이메일 인증 코드는 `SecureRandom` 기반으로 생성되며, 저장 시 해시(`PasswordEncoder`)로 저장됩니다.
+- 이메일 발송은 기본적으로 로깅 구현을 사용하고, `prod + tmta.email.ses.enabled=true`에서 AWS SES 구현을 사용합니다.
+- 약관은 현재 `TermsService` 내 인메모리(하드코딩) 문서로 제공됩니다.
 
-## 10. 리스크 정리 (중요)
+## 10. 우선 수정 권장 이슈 (코드 변경 보류, 문서화)
 
-1. 이메일 인증코드가 고정값(`1111`)으로 구현되어 보안 취약점이 있습니다.
-2. 이메일 인증코드 저장소가 인메모리여서 재시작/멀티 인스턴스 환경에서 인증 일관성이 깨질 수 있습니다.
-3. Refresh 쿠키에 `secure=false`가 설정되어 HTTPS 운영 환경 보안에 취약합니다.
-4. Access Token 만료시간이 과도하게 길어(약 100년) 토큰 탈취 시 피해가 장기화될 수 있습니다.
-5. 약속 생성/수정 검증 정책이 불완전하여 `onlyDate=false`인데 시간값이 누락되어도 통과할 수 있습니다.
-6. `availableTimeSlotCount` 필드의 명세(개수 제한)와 실제 로직(최소 시간슬롯 길이 필터) 의미가 불일치합니다.
-7. 팀 이름 중복 에러코드는 존재하지만 팀 생성 시 중복 체크가 없어 중복 이름이 저장될 수 있습니다.
-8. `application-dev.yml`에 로컬 DB 비밀번호가 하드코딩되어 비밀정보 관리 리스크가 있습니다.
-9. `application.yml`의 JWT 시크릿 기본 fallback 값이 존재해 운영에서 오설정 시 취약해질 수 있습니다.
-10. 운영 프로파일에서 `ddl-auto=update`를 사용해 스키마 변경 통제가 어려울 수 있습니다.
-11. Swagger 설정에 운영 서버 IP가 하드코딩되어 인프라 정보 노출 위험이 있습니다.
-12. CI/CD 워크플로 파일(`.github/workflows/deploy.yml`)이 사실상 비어 있어 자동 배포 체계가 부재합니다.
+아래 항목은 현재 코드 기준으로 확인된 우선 개선 필요 사항입니다. 이번 작업에서는 **코드 수정 없이 문서에만 정리**합니다.
+
+1. `application.yml`의 Access Token 만료시간이 과도하게 길어(약 100년) 토큰 탈취 시 피해가 장기화될 수 있습니다.
+2. `AuthController`의 Refresh 쿠키 설정이 `secure=false`라서 HTTPS 운영 환경 보안에 취약합니다.
+3. `application.yml`의 JWT 시크릿 기본 fallback 값이 존재해 운영에서 환경변수 오설정 시 취약하게 동작할 수 있습니다.
+4. `AppointmentCommandPolicy` 검증이 불완전하여 `onlyDate=false`인데 `startTime/endTime`이 누락되어도 생성/수정이 통과할 수 있습니다.
+5. `AppointmentCandidateFilter.availableTimeSlotCount`의 문서 의미(개수 제한)와 실제 로직 의미(최소 연속 슬롯 길이 필터)가 불일치합니다.
+6. `TeamService.createTeam()`에서 팀 이름 중복 검사 없이 저장되어 `TEAM_NAME_DUPLICATION` 에러코드가 실제로 사용되지 않습니다.
+7. `AuthService.login()` 경로에서 로그인 이메일 정규화가 일관되지 않아(회원가입은 소문자 정규화) 대소문자 입력 차이로 로그인 실패 가능성이 있습니다.
+8. `application-dev.yml`에 로컬 DB 비밀번호가 하드코딩되어 있습니다.
+9. `application-prod.yml`에서 `spring.jpa.hibernate.ddl-auto=update`를 사용해 운영 스키마 변경 통제가 어렵습니다.
+10. `SwaggerConfig`에 운영 서버 URL/IP가 하드코딩되어 있습니다.
+
+## 11. 구현/문서 불일치 이력 (정리)
+
+- 이메일 인증코드가 고정값(`1111`)이라는 과거 설명은 현재 구현과 다릅니다.
+  - 현재 구현: 랜덤 코드 생성 + 해시 저장 + 발송/검증 정책(쿨다운/횟수 제한) 적용
+- 테스트가 "Spring Context 중심"이라는 설명은 현재와 다릅니다.
+  - 현재 구현: 서비스 단위 테스트가 여러 도메인에 추가됨
