@@ -29,7 +29,8 @@ public class MemberController {
             description = """
 ### 제약조건
 - **인증된 사용자만 호출할 수 있습니다.**
-- nickname은 필수이며 최대 30자, profileImage는 최대 255자입니다.
+- nickname은 필수이며 최대 30자입니다.
+- 이미지가 있다면 profileImageBucket + profileImageKey를 함께 전달해야 합니다.
 
 ### 예외상황 / 에러코드
 - `INVALID_INPUT_VALUE (C001, 400)` : 요청 필드 검증 실패.

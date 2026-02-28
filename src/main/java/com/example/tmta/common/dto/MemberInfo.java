@@ -8,10 +8,10 @@ public record MemberInfo(
 		String name,
 		@Schema(description = "멤버 ID", example = "1")
 		String id,
-		@Schema(description = "프로필 이미지 URL", example = "http://example.com/profile.jpg")
-		String profileImageUrl
+		@Schema(description = "프로필 이미지 상세 경로(bucket/key)", example = "tmta-prod-assets/member-profile/1/20260227/uuid.png")
+		String profileImagePath
 ) {
-	public static MemberInfo of(Long memberId, String displayName, String profileImageUrl) {
-		return new MemberInfo(displayName, String.valueOf(memberId), profileImageUrl);
+	public static MemberInfo of(Long memberId, String displayName, String profileImagePath) {
+		return new MemberInfo(displayName, String.valueOf(memberId), profileImagePath);
 	}
 }

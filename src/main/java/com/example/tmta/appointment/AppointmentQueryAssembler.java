@@ -98,8 +98,20 @@ public class AppointmentQueryAssembler {
         if (displayName == null) {
             displayName = member.getName();
         }
-        String profile = membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage();
-        return MemberInfo.of(member.getId(), displayName, profile);
+        String profileBucket = membership.getTeamProfileImageBucket() != null
+                ? membership.getTeamProfileImageBucket()
+                : member.getProfileImageBucket();
+        String profileKey = membership.getTeamProfileImageKey() != null
+                ? membership.getTeamProfileImageKey()
+                : member.getProfileImageKey();
+        return MemberInfo.of(member.getId(), displayName, composeImagePath(profileBucket, profileKey));
+    }
+
+    private String composeImagePath(String bucket, String key) {
+        if (bucket == null || bucket.isBlank() || key == null || key.isBlank()) {
+            return null;
+        }
+        return bucket + "/" + key;
     }
 
     /** 후보 슬롯을 목록 응답용 DTO로 변환합니다. */

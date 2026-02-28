@@ -83,7 +83,7 @@ public class TeamService {
         teamRepository.save(team);
 
         TeamMembers creatorMembership = TeamMembers.createLeader(
-                team.getId(), current.getId(), current.getNickName(), current.getProfileImage()
+                team.getId(), current.getId(), current.getNickName(), current.getProfileImageBucket(), current.getProfileImageKey()
         );
         teamMembersRepository.save(creatorMembership);
 
@@ -127,7 +127,7 @@ public class TeamService {
         getTeam(teamId);
 
         TeamMembers membership = requireMembership(teamId, current.getId());
-        membership.updateTeamProfile(request.teamNickName(), request.teamProfileImage());
+        membership.updateTeamProfile(request.teamNickName(), request.teamProfileImageBucket(), request.teamProfileImageKey());
     }
 
     /** 현재 사용자를 팀에서 탈퇴 처리합니다. */

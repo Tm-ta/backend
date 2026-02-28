@@ -10,7 +10,7 @@ public record MyProfileResponse(
         String email,
         @Schema(description = "닉네임", example = "tmta_user")
         String nickname,
-        @Schema(description = "프로필 이미지 URL", example = "https://example.com/profile.png")
-        String profileImage
+        @Schema(description = "프로필 이미지 상세 경로(bucket/key)", example = "tmta-prod-assets/member-profile/1/20260227/uuid.png")
+        String profileImagePath
 ) {
 }

@@ -47,7 +47,8 @@ public class TeamMembers extends BaseEntity {
     @Column(length = 30)
     private String teamNickName;
 
-    private String teamProfileImage;
+    private String teamProfileImageBucket;
+    private String teamProfileImageKey;
     private boolean teamProfileSetupCompleted;
 
     @Version
@@ -55,22 +56,25 @@ public class TeamMembers extends BaseEntity {
 
     @Builder
     public TeamMembers(java.util.UUID teamId, Long memberId, TeamRole teamRole,
-                       String teamNickName, String teamProfileImage, boolean teamProfileSetupCompleted) {
+                       String teamNickName, String teamProfileImageBucket, String teamProfileImageKey, boolean teamProfileSetupCompleted) {
         this.teamId = teamId;
         this.memberId = memberId;
         this.teamRole = teamRole;
         this.teamNickName = teamNickName;
-        this.teamProfileImage = teamProfileImage;
+        this.teamProfileImageBucket = teamProfileImageBucket;
+        this.teamProfileImageKey = teamProfileImageKey;
         this.teamProfileSetupCompleted = teamProfileSetupCompleted;
     }
 
-    public static TeamMembers createLeader(java.util.UUID teamId, Long memberId, String teamNickName, String teamProfileImage) {
+    public static TeamMembers createLeader(java.util.UUID teamId, Long memberId, String teamNickName,
+                                           String teamProfileImageBucket, String teamProfileImageKey) {
         return TeamMembers.builder()
                 .teamId(teamId)
                 .memberId(memberId)
                 .teamRole(TeamRole.ADMIN)
                 .teamNickName(teamNickName)
-                .teamProfileImage(teamProfileImage)
+                .teamProfileImageBucket(teamProfileImageBucket)
+                .teamProfileImageKey(teamProfileImageKey)
                 .teamProfileSetupCompleted(true)
                 .build();
     }
@@ -81,7 +85,8 @@ public class TeamMembers extends BaseEntity {
                 .memberId(memberId)
                 .teamRole(TeamRole.GENERAL)
                 .teamNickName(null)
-                .teamProfileImage(null)
+                .teamProfileImageBucket(null)
+                .teamProfileImageKey(null)
                 .teamProfileSetupCompleted(false)
                 .build();
     }
@@ -90,9 +95,10 @@ public class TeamMembers extends BaseEntity {
         this.teamRole = teamRole;
     }
 
-    public void updateTeamProfile(String teamNickName, String teamProfileImage) {
+    public void updateTeamProfile(String teamNickName, String teamProfileImageBucket, String teamProfileImageKey) {
         this.teamNickName = teamNickName;
-        this.teamProfileImage = teamProfileImage;
+        this.teamProfileImageBucket = teamProfileImageBucket;
+        this.teamProfileImageKey = teamProfileImageKey;
         this.teamProfileSetupCompleted = true;
     }
 }

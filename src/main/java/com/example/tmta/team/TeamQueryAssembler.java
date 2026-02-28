@@ -66,7 +66,7 @@ public class TeamQueryAssembler {
                 team.getId(),
                 team.getName(),
                 (long) memberships.size(),
-                team.getProfileImage(),
+                composeImagePath(team.getProfileImageBucket(), team.getProfileImageKey()),
                 appointmentDetails,
                 members
         );
@@ -81,8 +81,20 @@ public class TeamQueryAssembler {
         if (displayName == null) {
             displayName = member.getName();
         }
-        String profileImage = membership.getTeamProfileImage() != null ? membership.getTeamProfileImage() : member.getProfileImage();
-        return MemberInfo.of(member.getId(), displayName, profileImage);
+        String profileBucket = membership.getTeamProfileImageBucket() != null
+                ? membership.getTeamProfileImageBucket()
+                : member.getProfileImageBucket();
+        String profileKey = membership.getTeamProfileImageKey() != null
+                ? membership.getTeamProfileImageKey()
+                : member.getProfileImageKey();
+        return MemberInfo.of(member.getId(), displayName, composeImagePath(profileBucket, profileKey));
+    }
+
+    private String composeImagePath(String bucket, String key) {
+        if (bucket == null || bucket.isBlank() || key == null || key.isBlank()) {
+            return null;
+        }
+        return bucket + "/" + key;
     }
 
     /** 약속 엔티티를 팀 상세 내 약속 DTO로 변환합니다. */

@@ -76,6 +76,7 @@ docker compose up -d --build
 - `DB_USERNAME`
 - `DB_PASSWORD`
 - `JWT_SECRET_BASE64` (권장)
+- `S3_BUCKET`
 
 ## 5. 인증/인가 개요
 
@@ -134,6 +135,12 @@ docker compose up -d --build
 
 - `GET /api/v1/terms`
 - `GET /api/v1/terms/{code}`
+
+### 6.6 Storage
+
+- `POST /api/v1/storage/presign/upload` (S3 PUT pre-signed URL 발급)
+
+프로필 이미지 저장 방식은 전체 URL이 아닌 `bucket + key`입니다.
 
 ## 7. Swagger
 

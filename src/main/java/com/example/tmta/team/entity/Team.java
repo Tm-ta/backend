@@ -31,7 +31,8 @@ public class Team extends BaseEntity{
     @Column(length = 20, nullable = false)
     private String name;
 
-    private String profileImage;
+    private String profileImageBucket;
+    private String profileImageKey;
 
     @Enumerated(EnumType.STRING)
     @ColumnDefault("'LEADER_ONLY'")

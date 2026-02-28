@@ -238,6 +238,70 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2_ses_sender.name
 }
 
+resource "aws_s3_bucket" "assets" {
+  bucket = var.s3_bucket_name
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-assets"
+  })
+}
+
+resource "aws_s3_bucket_public_access_block" "assets" {
+  bucket = aws_s3_bucket.assets.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_cors_configuration" "assets" {
+  bucket = aws_s3_bucket.assets.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "GET", "HEAD"]
+    allowed_origins = [
+      "https://${var.api_domain_name}",
+      "http://localhost:3000",
+      "http://localhost:8080"
+    ]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3000
+  }
+}
+
+data "aws_iam_policy_document" "s3_upload" {
+  statement {
+    sid = "AllowS3ProfileUploads"
+    actions = [
+      "s3:PutObject",
+      "s3:GetObject"
+    ]
+    resources = ["${aws_s3_bucket.assets.arn}/*"]
+  }
+
+  statement {
+    sid       = "AllowS3ListBucket"
+    actions   = ["s3:ListBucket"]
+    resources = [aws_s3_bucket.assets.arn]
+  }
+}
+
+resource "aws_iam_policy" "s3_upload" {
+  name   = "${var.name_prefix}-s3-upload-policy"
+  policy = data.aws_iam_policy_document.s3_upload.json
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-s3-upload-policy"
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "s3_upload" {
+  role       = aws_iam_role.ec2_ses_sender.name
+  policy_arn = aws_iam_policy.s3_upload.arn
+}
+
 resource "aws_acm_certificate" "api" {
   domain_name       = var.api_domain_name
   validation_method = "DNS"

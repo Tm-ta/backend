@@ -31,7 +31,8 @@ public class Member extends BaseEntity{
     @Column(nullable = false)
     private AuthProvider authProvider;
     private String providerId;
-    private String profileImage;
+    private String profileImageBucket;
+    private String profileImageKey;
     private boolean profileSetupCompleted;
     private boolean emailVerified;
     private boolean pushAlarmAgree;
@@ -66,9 +67,10 @@ public class Member extends BaseEntity{
                 .build();
     }
 
-    public void updateProfile(String nickName, String profileImage) {
+    public void updateProfile(String nickName, String profileImageBucket, String profileImageKey) {
         this.nickName = nickName;
-        this.profileImage = profileImage;
+        this.profileImageBucket = profileImageBucket;
+        this.profileImageKey = profileImageKey;
         this.profileSetupCompleted = true;
     }
 

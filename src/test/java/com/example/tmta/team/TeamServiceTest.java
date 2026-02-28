@@ -162,10 +162,11 @@ class TeamServiceTest {
             when(teamRepository.findById(teamId)).thenReturn(Optional.of(Team.builder().name("A").build()));
             when(teamMembersRepository.findByTeamIdAndMemberId(teamId, currentMember.getId())).thenReturn(Optional.of(membership));
 
-            teamService.setupMyTeamProfile(teamId, new TeamProfileSetupRequestDto("새닉", "img.png"));
+            teamService.setupMyTeamProfile(teamId, new TeamProfileSetupRequestDto("새닉", "tmta-assets", "team-profile/1/img.png"));
 
             assertThat(membership.getTeamNickName()).isEqualTo("새닉");
-            assertThat(membership.getTeamProfileImage()).isEqualTo("img.png");
+            assertThat(membership.getTeamProfileImageBucket()).isEqualTo("tmta-assets");
+            assertThat(membership.getTeamProfileImageKey()).isEqualTo("team-profile/1/img.png");
             assertThat(membership.isTeamProfileSetupCompleted()).isTrue();
         }
     }
@@ -178,7 +179,7 @@ class TeamServiceTest {
         @DisplayName("팀장은 탈퇴 불가")
         void leaderCannotExit() {
             UUID teamId = UUID.randomUUID();
-            TeamMembers leaderMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "nick", "img");
+            TeamMembers leaderMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "nick", "tmta-assets", "member-profile/1/img.png");
 
             when(currentMemberProvider.getCurrentMember()).thenReturn(currentMember);
             when(teamRepository.findById(teamId)).thenReturn(Optional.of(Team.builder().name("A").build()));
@@ -215,7 +216,7 @@ class TeamServiceTest {
         @DisplayName("리더 위임 성공 시 역할 교체")
         void delegateSuccess() {
             UUID teamId = UUID.randomUUID();
-            TeamMembers leaderMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null);
+            TeamMembers leaderMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null, null);
             TeamMembers targetMembership = TeamMembers.createGeneral(teamId, 2L);
 
             when(currentMemberProvider.getCurrentMember()).thenReturn(currentMember);
@@ -239,7 +240,7 @@ class TeamServiceTest {
         @DisplayName("리더가 자기 자신을 강퇴하려 하면 CANNOT_KICK_LEADER 예외")
         void cannotKickSelf() {
             UUID teamId = UUID.randomUUID();
-            TeamMembers leaderMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null);
+            TeamMembers leaderMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null, null);
 
             when(currentMemberProvider.getCurrentMember()).thenReturn(currentMember);
             when(teamRepository.findById(teamId)).thenReturn(Optional.of(Team.builder().name("A").build()));

@@ -250,7 +250,7 @@ class AppointmentServiceTest {
         void dateMismatch() {
             Appointment appointment = schedulingAppointment(teamId, currentMember.getId());
 
-            TeamMembers adminMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null);
+            TeamMembers adminMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null, null);
             when(currentMemberProvider.getCurrentMember()).thenReturn(currentMember);
             when(teamRepository.existsById(teamId)).thenReturn(true);
             when(teamMembersRepository.findByTeamIdAndMemberId(teamId, currentMember.getId())).thenReturn(Optional.of(adminMembership));
@@ -270,7 +270,7 @@ class AppointmentServiceTest {
         @DisplayName("확정 성공 시 finalTime 생성 및 상태 CONFIRMED")
         void confirmSuccess() {
             Appointment appointment = schedulingAppointment(teamId, currentMember.getId());
-            TeamMembers adminMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null);
+            TeamMembers adminMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null, null);
 
             when(currentMemberProvider.getCurrentMember()).thenReturn(currentMember);
             when(teamRepository.existsById(teamId)).thenReturn(true);
@@ -297,7 +297,7 @@ class AppointmentServiceTest {
         void invalidState() {
             Appointment appointment = schedulingAppointment(teamId, currentMember.getId());
             appointment.updateState(AppointmentState.CONFIRMED);
-            TeamMembers adminMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null);
+            TeamMembers adminMembership = TeamMembers.createLeader(teamId, currentMember.getId(), "leader", null, null);
 
             when(currentMemberProvider.getCurrentMember()).thenReturn(currentMember);
             when(teamRepository.existsById(teamId)).thenReturn(true);

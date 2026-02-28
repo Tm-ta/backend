@@ -82,7 +82,8 @@ public class DataLoader implements CommandLineRunner {
         if (teamRepository.findByName("Team Alpha").isEmpty()) {
             Team teamAlpha = Team.builder()
                     .name("Team Alpha")
-                    .profileImage("team-alpha.png")
+                    .profileImageBucket("tmta-dev-assets")
+                    .profileImageKey("team-profile/team-alpha.png")
                     .build();
             teamRepository.save(teamAlpha);
 
@@ -92,7 +93,8 @@ public class DataLoader implements CommandLineRunner {
                     .memberId(testMember.getId())
                     .teamRole(TeamRole.ADMIN)
                     .teamNickName(testMember.getNickName())
-                    .teamProfileImage(testMember.getProfileImage())
+                    .teamProfileImageBucket(testMember.getProfileImageBucket())
+                    .teamProfileImageKey(testMember.getProfileImageKey())
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmAlphaAdmin);
@@ -103,7 +105,8 @@ public class DataLoader implements CommandLineRunner {
                     .memberId(member1.getId())
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(member1.getNickName())
-                    .teamProfileImage(member1.getProfileImage())
+                    .teamProfileImageBucket(member1.getProfileImageBucket())
+                    .teamProfileImageKey(member1.getProfileImageKey())
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmAlphaMember1);
@@ -138,7 +141,8 @@ public class DataLoader implements CommandLineRunner {
         if (teamRepository.findByName("Team Beta").isEmpty()) {
             Team teamBeta = Team.builder()
                     .name("Team Beta")
-                    .profileImage("team-beta.png")
+                    .profileImageBucket("tmta-dev-assets")
+                    .profileImageKey("team-profile/team-beta.png")
                     .build();
             teamRepository.save(teamBeta);
 
@@ -148,7 +152,8 @@ public class DataLoader implements CommandLineRunner {
                     .memberId(member1.getId())
                     .teamRole(TeamRole.ADMIN)
                     .teamNickName(member1.getNickName())
-                    .teamProfileImage(member1.getProfileImage())
+                    .teamProfileImageBucket(member1.getProfileImageBucket())
+                    .teamProfileImageKey(member1.getProfileImageKey())
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaAdmin);
@@ -159,7 +164,8 @@ public class DataLoader implements CommandLineRunner {
                     .memberId(testMember.getId())
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(testMember.getNickName())
-                    .teamProfileImage(testMember.getProfileImage())
+                    .teamProfileImageBucket(testMember.getProfileImageBucket())
+                    .teamProfileImageKey(testMember.getProfileImageKey())
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaTestMember);
@@ -170,7 +176,8 @@ public class DataLoader implements CommandLineRunner {
                     .memberId(member2.getId())
                     .teamRole(TeamRole.GENERAL)
                     .teamNickName(member2.getNickName())
-                    .teamProfileImage(member2.getProfileImage())
+                    .teamProfileImageBucket(member2.getProfileImageBucket())
+                    .teamProfileImageKey(member2.getProfileImageKey())
                     .teamProfileSetupCompleted(true)
                     .build();
             teamMembersRepository.save(tmBetaMember2);

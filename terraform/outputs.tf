@@ -23,6 +23,11 @@ output "ses_instance_role_arn" {
   value       = aws_iam_role.ec2_ses_sender.arn
 }
 
+output "s3_bucket_name" {
+  description = "S3 bucket used for profile image uploads."
+  value       = aws_s3_bucket.assets.bucket
+}
+
 output "acm_certificate_arn" {
   description = "ACM certificate ARN used by the HTTPS listener."
   value       = aws_acm_certificate_validation.api.certificate_arn

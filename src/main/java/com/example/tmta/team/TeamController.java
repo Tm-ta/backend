@@ -157,7 +157,8 @@ public class TeamController {
 ### 제약조건
 - **인증된 사용자만 호출할 수 있습니다.**
 - **사용자 프로필 설정(profileSetupCompleted)이 완료되어야 합니다.**
-- teamNickName은 필수이며 최대 30자, teamProfileImage는 최대 255자입니다.
+- teamNickName은 필수이며 최대 30자입니다.
+- 이미지가 있다면 teamProfileImageBucket + teamProfileImageKey를 함께 전달해야 합니다.
 - 해당 팀 멤버만 설정할 수 있습니다.
 
 ### 예외상황 / 에러코드

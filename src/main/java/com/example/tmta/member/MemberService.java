@@ -21,7 +21,7 @@ public class MemberService {
 
         // 최초 설정 중 이탈한 사용자를 위해, profileSetupCompleted 플래그를 서버에서 관리합니다.
         // 이 API를 재호출하면 언제든 이어서 설정 완료할 수 있습니다.
-        member.updateProfile(request.nickname(), request.profileImage());
+        member.updateProfile(request.nickname(), request.profileImageBucket(), request.profileImageKey());
     }
 
     /** 현재 로그인 사용자의 기본 프로필 정보를 조회합니다. */
@@ -32,7 +32,14 @@ public class MemberService {
                 member.getId(),
                 member.getEmail(),
                 member.getNickName(),
-                member.getProfileImage()
+                composeImagePath(member.getProfileImageBucket(), member.getProfileImageKey())
         );
+    }
+
+    private String composeImagePath(String bucket, String key) {
+        if (bucket == null || bucket.isBlank() || key == null || key.isBlank()) {
+            return null;
+        }
+        return bucket + "/" + key;
     }
 }
