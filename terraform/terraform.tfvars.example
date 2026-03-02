@@ -1,6 +1,7 @@
 aws_region      = "ap-northeast-2"
 hosted_zone_id  = "ZXXXXXXXXXXXXX"
 api_domain_name = "api.tm-ta.com"
+storage_domain_name = "storage.tm-ta.com"
 s3_bucket_name  = "tmta-prod-assets"
 
 # Spring Boot (example)

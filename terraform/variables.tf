@@ -16,6 +16,12 @@ variable "api_domain_name" {
   default     = "api.tm-ta.com"
 }
 
+variable "storage_domain_name" {
+  description = "FQDN for S3 assets through CloudFront."
+  type        = string
+  default     = "storage.tm-ta.com"
+}
+
 variable "hosted_zone_id" {
   description = "Route53 public hosted zone ID that owns api_domain_name (e.g., tm-ta.com zone)."
   type        = string
@@ -107,4 +113,15 @@ variable "tags" {
 variable "s3_bucket_name" {
   description = "S3 bucket name for profile image uploads."
   type        = string
+}
+
+variable "cloudfront_price_class" {
+  description = "CloudFront price class to control edge locations and cost."
+  type        = string
+  default     = "PriceClass_200"
+
+  validation {
+    condition     = contains(["PriceClass_All", "PriceClass_200", "PriceClass_100"], var.cloudfront_price_class)
+    error_message = "cloudfront_price_class must be one of PriceClass_All, PriceClass_200, PriceClass_100."
+  }
 }

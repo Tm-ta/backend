@@ -271,6 +271,14 @@ resource "aws_s3_bucket_cors_configuration" "assets" {
   }
 }
 
+resource "aws_cloudfront_origin_access_control" "assets" {
+  name                              = "${var.name_prefix}-assets-oac"
+  description                       = "OAC for ${var.s3_bucket_name}"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
 data "aws_iam_policy_document" "s3_upload" {
   statement {
     sid = "AllowS3ProfileUploads"
@@ -315,6 +323,20 @@ resource "aws_acm_certificate" "api" {
   })
 }
 
+resource "aws_acm_certificate" "storage" {
+  provider          = aws.us_east_1
+  domain_name       = var.storage_domain_name
+  validation_method = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-storage-acm"
+  })
+}
+
 resource "aws_route53_record" "acm_validation" {
   for_each = {
     for dvo in aws_acm_certificate.api.domain_validation_options : dvo.domain_name => {
@@ -332,9 +354,32 @@ resource "aws_route53_record" "acm_validation" {
   allow_overwrite = true
 }
 
+resource "aws_route53_record" "storage_acm_validation" {
+  for_each = {
+    for dvo in aws_acm_certificate.storage.domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  }
+
+  zone_id         = var.hosted_zone_id
+  name            = each.value.name
+  type            = each.value.type
+  ttl             = 60
+  records         = [each.value.record]
+  allow_overwrite = true
+}
+
 resource "aws_acm_certificate_validation" "api" {
   certificate_arn         = aws_acm_certificate.api.arn
   validation_record_fqdns = [for r in aws_route53_record.acm_validation : r.fqdn]
+}
+
+resource "aws_acm_certificate_validation" "storage" {
+  provider                = aws.us_east_1
+  certificate_arn         = aws_acm_certificate.storage.arn
+  validation_record_fqdns = [for r in aws_route53_record.storage_acm_validation : r.fqdn]
 }
 
 resource "aws_lb" "api" {
@@ -493,5 +538,96 @@ resource "aws_route53_record" "api_alias" {
     name                   = aws_lb.api.dns_name
     zone_id                = aws_lb.api.zone_id
     evaluate_target_health = true
+  }
+}
+
+resource "aws_cloudfront_distribution" "assets" {
+  enabled         = true
+  is_ipv6_enabled = true
+  price_class     = var.cloudfront_price_class
+  aliases         = [var.storage_domain_name]
+
+  origin {
+    domain_name              = aws_s3_bucket.assets.bucket_regional_domain_name
+    origin_id                = "s3-${aws_s3_bucket.assets.id}"
+    origin_access_control_id = aws_cloudfront_origin_access_control.assets.id
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "s3-${aws_s3_bucket.assets.id}"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD", "OPTIONS"]
+    cached_methods         = ["GET", "HEAD"]
+    compress               = true
+    cache_policy_id        = "658327ea-f89d-4fab-a63d-7e88639e58f6" # Managed-CachingOptimized
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    acm_certificate_arn      = aws_acm_certificate_validation.storage.certificate_arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-assets-cf"
+  })
+
+  depends_on = [aws_acm_certificate_validation.storage]
+}
+
+data "aws_iam_policy_document" "assets_bucket_policy" {
+  statement {
+    sid    = "AllowCloudFrontRead"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject"
+    ]
+    resources = ["${aws_s3_bucket.assets.arn}/*"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values   = [aws_cloudfront_distribution.assets.arn]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "assets" {
+  bucket = aws_s3_bucket.assets.id
+  policy = data.aws_iam_policy_document.assets_bucket_policy.json
+}
+
+resource "aws_route53_record" "storage_alias_a" {
+  zone_id = var.hosted_zone_id
+  name    = var.storage_domain_name
+  type    = "A"
+
+  alias {
+    name                   = aws_cloudfront_distribution.assets.domain_name
+    zone_id                = aws_cloudfront_distribution.assets.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+resource "aws_route53_record" "storage_alias_aaaa" {
+  zone_id = var.hosted_zone_id
+  name    = var.storage_domain_name
+  type    = "AAAA"
+
+  alias {
+    name                   = aws_cloudfront_distribution.assets.domain_name
+    zone_id                = aws_cloudfront_distribution.assets.hosted_zone_id
+    evaluate_target_health = false
   }
 }

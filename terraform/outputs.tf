@@ -3,6 +3,11 @@ output "api_url" {
   value       = "https://${var.api_domain_name}"
 }
 
+output "storage_url" {
+  description = "HTTPS URL for the CloudFront-backed storage domain."
+  value       = "https://${var.storage_domain_name}"
+}
+
 output "alb_dns_name" {
   description = "ALB DNS name (useful for debugging before DNS propagates)."
   value       = aws_lb.api.dns_name
@@ -31,6 +36,16 @@ output "s3_bucket_name" {
 output "acm_certificate_arn" {
   description = "ACM certificate ARN used by the HTTPS listener."
   value       = aws_acm_certificate_validation.api.certificate_arn
+}
+
+output "storage_acm_certificate_arn" {
+  description = "ACM certificate ARN used by the CloudFront storage domain."
+  value       = aws_acm_certificate_validation.storage.certificate_arn
+}
+
+output "cloudfront_distribution_domain_name" {
+  description = "CloudFront distribution domain name for storage."
+  value       = aws_cloudfront_distribution.assets.domain_name
 }
 
 output "effective_ssh_cidrs" {
