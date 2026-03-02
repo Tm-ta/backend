@@ -2,11 +2,14 @@ package com.example.tmta.team;
 
 import com.example.tmta.team.dto.DetailTeamList;
 import com.example.tmta.team.dto.TeamListResponseDto;
+import com.example.tmta.team.dto.TeamProfileImagePresignRequestDto;
 import com.example.tmta.team.dto.TeamProfileSetupRequestDto;
 import com.example.tmta.team.dto.TeamSaveRequestDto;
 import com.example.tmta.team.dto.TeamSaveResponseDto;
 import com.example.tmta.appointment.entity.Appointment;
 import com.example.tmta.member.entity.Member;
+import com.example.tmta.storage.S3PresignService;
+import com.example.tmta.storage.dto.PresignUploadResponse;
 import com.example.tmta.team.entity.Team;
 import com.example.tmta.team.entity.TeamMembers;
 import com.example.tmta.team.entity.type.NamePolicy;
@@ -40,6 +43,7 @@ public class TeamService {
     private final AppointmentRepository appointmentRepository;
     private final CurrentMemberProvider currentMemberProvider;
     private final TeamQueryAssembler teamQueryAssembler;
+    private final S3PresignService s3PresignService;
 
     /** 현재 사용자가 속한 팀 목록을 조회합니다. */
     @Transactional(readOnly = true)
@@ -128,6 +132,18 @@ public class TeamService {
 
         TeamMembers membership = requireMembership(teamId, current.getId());
         membership.updateTeamProfile(request.teamNickName(), request.teamProfileImageBucket(), request.teamProfileImageKey());
+    }
+
+    /** 팀 대표 프로필 이미지 업로드용 pre-signed URL을 발급합니다. */
+    @Transactional(readOnly = true)
+    public PresignUploadResponse createTeamProfileImagePresignedUrl(UUID teamId, TeamProfileImagePresignRequestDto request) {
+        Member current = getCurrentMemberWithProfile();
+        getTeam(teamId);
+
+        TeamMembers leaderMembership = requireMembership(teamId, current.getId());
+        requireLeader(leaderMembership);
+
+        return s3PresignService.createTeamProfileUploadUrl(teamId, request.fileName(), request.contentType());
     }
 
     /** 현재 사용자를 팀에서 탈퇴 처리합니다. */

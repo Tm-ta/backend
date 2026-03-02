@@ -20,6 +20,7 @@ import java.util.UUID;
 public class S3PresignService {
 
     private static final DateTimeFormatter DAY_FORMAT = DateTimeFormatter.BASIC_ISO_DATE;
+    private static final String TEAM_PROFILE_KEY_PREFIX = "team-profile";
 
     private final S3Presigner s3Presigner;
     private final S3StorageProperties properties;
@@ -61,6 +62,38 @@ public class S3PresignService {
         }
     }
 
+    public PresignUploadResponse createTeamProfileUploadUrl(UUID teamId, String fileName, String contentType) {
+        validateBucket();
+        validateContentType(contentType);
+
+        String bucket = properties.getBucket().trim();
+        String key = buildTeamProfileObjectKey(teamId, fileName);
+
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentType(contentType)
+                .build();
+
+        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofSeconds(properties.getPresignExpirationSeconds()))
+                .putObjectRequest(putObjectRequest)
+                .build();
+
+        try {
+            PresignedPutObjectRequest presigned = s3Presigner.presignPutObject(presignRequest);
+            return new PresignUploadResponse(
+                    bucket,
+                    key,
+                    presigned.url().toString(),
+                    "PUT",
+                    properties.getPresignExpirationSeconds()
+            );
+        } catch (RuntimeException e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     private void validateBucket() {
         if (properties.getBucket() == null || properties.getBucket().isBlank()) {
             throw new IllegalArgumentException("S3 버킷이 설정되어 있지 않습니다.");
@@ -79,12 +112,20 @@ public class S3PresignService {
     }
 
     private String buildObjectKey(Long memberId, PresignUploadRequest request) {
-        String extension = extractExtension(request.fileName());
+        return buildObjectKey(request.purpose().keyPrefix(), memberId.toString(), request.fileName());
+    }
+
+    private String buildTeamProfileObjectKey(UUID teamId, String fileName) {
+        return buildObjectKey(TEAM_PROFILE_KEY_PREFIX, teamId.toString(), fileName);
+    }
+
+    private String buildObjectKey(String keyPrefix, String ownerId, String fileName) {
+        String extension = extractExtension(fileName);
         String date = LocalDate.now().format(DAY_FORMAT);
         String random = UUID.randomUUID().toString();
-        return "%s/%d/%s/%s%s".formatted(
-                request.purpose().keyPrefix(),
-                memberId,
+        return "%s/%s/%s/%s%s".formatted(
+                keyPrefix,
+                ownerId,
                 date,
                 random,
                 extension

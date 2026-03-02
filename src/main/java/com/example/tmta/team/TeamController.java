@@ -3,12 +3,15 @@ package com.example.tmta.team;
 import com.example.tmta.common.exception.dto.ErrorResponse;
 import com.example.tmta.team.dto.DetailTeamList;
 import com.example.tmta.team.dto.TeamListResponseDto;
+import com.example.tmta.team.dto.TeamProfileImagePresignRequestDto;
 import com.example.tmta.team.dto.TeamProfileSetupRequestDto;
 import com.example.tmta.team.dto.TeamSaveRequestDto;
 import com.example.tmta.team.dto.TeamSaveResponseDto;
+import com.example.tmta.storage.dto.PresignUploadResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -149,6 +152,71 @@ public class TeamController {
     public ResponseEntity<?> joinTeam(@Parameter(description = "팀 ID") @PathVariable java.util.UUID teamId){
         teamService.joinTeam(teamId);
         return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Operation(
+            summary = "팀 대표 프로필 이미지 업로드 pre-signed URL 발급",
+            description = """
+### 제약조건
+- **인증된 사용자만 호출할 수 있습니다.**
+- **사용자 프로필 설정(profileSetupCompleted)이 완료되어야 합니다.**
+- **해당 팀의 팀장(ADMIN)만 호출할 수 있습니다.**
+- 응답의 `bucket`, `key`를 팀 대표 프로필 저장 API에서 사용하고, 파일 업로드에는 `presignedUrl`을 사용합니다.
+- 발급 URL은 만료 시간이 지나면 사용할 수 없습니다.
+                    """,
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    required = true,
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = TeamProfileImagePresignRequestDto.class),
+                            examples = @ExampleObject(
+                                    name = "request",
+                                    value = """
+                                            {
+                                              "fileName": "team-logo.png",
+                                              "contentType": "image/png"
+                                            }
+                                            """
+                            )
+                    )
+            )
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "발급 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = PresignUploadResponse.class),
+                            examples = @ExampleObject(
+                                    name = "response",
+                                    value = """
+                                            {
+                                              "bucket": "tmta-prod-assets",
+                                              "key": "team-profile/550e8400-e29b-41d4-a716-446655440000/20260302/123e4567-e89b-12d3-a456-426614174000.png",
+                                              "presignedUrl": "https://tmta-prod-assets.s3.ap-northeast-2.amazonaws.com/team-profile/550e8400-e29b-41d4-a716-446655440000/20260302/123e4567-e89b-12d3-a456-426614174000.png?...",
+                                              "method": "PUT",
+                                              "expiresInSeconds": 300
+                                            }
+                                            """
+                            )
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "입력값 오류 (C001), 팀 멤버가 아님 (T005), 팀 리더가 아님 (T007)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 필요 (C004)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "403", description = "프로필 설정 필요 (M005)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "팀 또는 사용자를 찾을 수 없습니다 (T001, M001)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PostMapping("/{teamId}/profile-image/presign")
+    public ResponseEntity<PresignUploadResponse> createTeamProfileImagePresignedUrl(
+            @Parameter(description = "팀 ID") @PathVariable java.util.UUID teamId,
+            @Valid @RequestBody TeamProfileImagePresignRequestDto request
+    ) {
+        return ResponseEntity.ok(teamService.createTeamProfileImagePresignedUrl(teamId, request));
     }
 
     @Operation(
